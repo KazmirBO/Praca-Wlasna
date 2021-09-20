@@ -327,13 +327,18 @@ class Window(QMainWindow):
 
         self.amb = QFormLayout()
         self.SAP = QLineEdit()
+        self.SAP.setPlaceholderText("Short")
         self.LAP = QLineEdit()
-        self.LAP = QLineEdit()
+        self.LAP.setPlaceholderText("Long")
         self.par = QFormLayout()
         self.SAG = QLineEdit()
+        self.SAG.setPlaceholderText("Short")
         self.LAG = QLineEdit()
+        self.LAG.setPlaceholderText("Long")
         self.members = QLineEdit()
+        self.members.setPlaceholderText("Members")
         self.partyName = QLineEdit()
+        self.partyName.setPlaceholderText("Party name")
         self.ambitions = QLabel("AMBITIONS")
         self.ambitions.setAlignment(QtCore.Qt.AlignCenter)
         self.party = QLabel("PARTY")
@@ -796,12 +801,12 @@ class Window(QMainWindow):
     # --------------------------------------------------------------------------
 
     def _createMenu(self):
-        self.menu = self.menuBar().addMenu("&Menu")
-        self.menu.addAction('&Get .chr File Name', self.getFileName)
-        self.menu.addAction('&Import from ' + self.response, self.impo)
-        self.menu.addAction('&Export to ' + self.response, self.expo)
-        self.menu.addAction('&Help', self.help)
+        self.menu = self.menuBar().addMenu('&Menu')
+        self.menu.addAction('&Get File Name', self.getFileName)
+        self.menu.addAction('&Import', self.impo)
+        self.menu.addAction('&Export', self.expo)
         self.menu.addAction('&Exit', self.close)
+        self.menu = self.menuBar().addAction('&Help', self.help)
 
     def _createStatusBar(self):
         status = QStatusBar()
@@ -811,7 +816,8 @@ class Window(QMainWindow):
     def help(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
-        msg.setText("Character sheet for WFRP 4e.")
+        msg.setText("Application for displaying and editing characters for " +
+                    "WFRP 4e with the possibility of exporting and importing.")
         msg.setInformativeText('The above program uses files ' +
                                'with the * .chr extension.')
         msg.setWindowTitle("Help")
