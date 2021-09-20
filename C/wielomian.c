@@ -51,7 +51,7 @@ int main(){
         }
       }
       if(lop==0){ //wyswietlenie x
-        printf("\tx= ",dziel[j]);
+        printf("\tx= ",dziel[j]); 
       }
     }
   }
