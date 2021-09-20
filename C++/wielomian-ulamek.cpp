@@ -5,7 +5,7 @@ Data:
   Rozpoczecie: 15:30 19-11-2020
   Zakonczenie: xxx
 */
-#include <iostream>
+#include <iostream> 
 #include <cmath>
 #include <vector>
 //sprawdzenie czy do danego x na pewno wychodzi 0
