@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys, random, os, atexit, platform
+import os
+import sys
+import platform
 # from PyQt5 import *
 # from PyQt5.QtGui import *
 from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QGridLayout, QSpinBox,
-                             QMainWindow, QApplication, QLabel, QLineEdit)
+                             QMainWindow, QApplication, QLineEdit)
 
 
 class Main(QMainWindow):
@@ -44,14 +46,14 @@ class Main(QMainWindow):
                 pass
             pass
         for i in range(self.max):
-            self.main.addWidget(QLineEdit(), int(i%2), int(i/2))
+            self.main.addWidget(QLineEdit(), int(i % 2), int(i/2))
             pass
         pass
 
     def impo(self):
         if platform.system() == 'Linux':
             self.response = '/tmp/test.txt'
-            if os.path.isfile(self.response) == False:
+            if not os.path.isfile(self.response):
                 f = open(self.response, 'w')
                 f.write("0")
                 f.close()
@@ -59,7 +61,7 @@ class Main(QMainWindow):
             pass
         elif platform.system() == 'Windows':
             self.response = './test.txt'
-            if os.path.isfile(self.response) == False:
+            if not os.path.isfile(self.response):
                 f = open(self.response, 'w')
                 f.write("0")
                 f.close()
@@ -82,12 +84,14 @@ class Main(QMainWindow):
 
     pass
 
+
 def window():
     app = QApplication(sys.argv)
     window = Main()
     window.show()
     sys.exit(app.exec_())
     pass
+
 
 if __name__ == '__main__':
     window()
