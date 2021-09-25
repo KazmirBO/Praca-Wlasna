@@ -1,10 +1,12 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # UTF-8
 
-import sys, random
-from PyQt5 import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+import sys
+import random
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import (QMainWindow, QGridLayout, QHBoxLayout, QWidget,
+                             QLabel, QSpinBox, QPushButton, QStatusBar,
+                             QApplication, QFileDialog)
 
 
 class StartWindow(QMainWindow):
@@ -119,6 +121,7 @@ class StartWindow(QMainWindow):
         self.response = filename.split("/")[-1]
         self.Title = "Character Sheet - Call of Cthulhu - " + self.response
         self.setWindowTitle(self.Title)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
