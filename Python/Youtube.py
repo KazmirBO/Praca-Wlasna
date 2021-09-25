@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
 
-# from PyQt5 import *
-# from PyQt5.QtWebKitWidgets import *
-# import json
 import os
 import sys
 import requests
 from playsound import playsound
 from youtube_search import YoutubeSearch
-# github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
 from PyQt5.QtGui import QFont, QImage, QPixmap
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
                              QPushButton, QLabel, QWidget, QMainWindow,
