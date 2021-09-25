@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 # UTF-8
 
-import sys
 import os
+import sys
+import random
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (QApplication, QComboBox, QLabel, QLineEdit,
+from PyQt5.QtWidgets import (QApplication, QComboBox, QPushButton, QLineEdit,
                              QSpinBox, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QFormLayout, QMainWindow, QStatusBar, QWidget,
-                             QFileDialog, QScrollArea, QMessageBox)
+                             QFileDialog, QScrollArea, QMessageBox, QLabel)
 
 
 class Window(QMainWindow):
@@ -44,6 +45,9 @@ class Window(QMainWindow):
 
         self.Level = QComboBox()
         self.Level.addItems(["1", "2", "3", "4"])
+
+        self.roll = QPushButton("Roll Characterisitcs")
+        self.roll.clicked.connect(self.rollForStats)
 
         self.Status = QComboBox()
         self.Status.addItems(["Brass", "Silver", "Gold"])
@@ -87,6 +91,7 @@ class Window(QMainWindow):
 
         self.line2.addWidget(QLabel("Career: "))
         self.line2.addWidget(self.Car)
+        self.line2.addWidget(self.roll)
         self.line2.addWidget(QLabel("Career Level: "))
         self.line2.addWidget(self.Level)
 
@@ -645,6 +650,64 @@ class Window(QMainWindow):
 
         # ----------------------------------------------------------------------
 
+    def rollForStats(self):
+        if self.Species.currentIndex() == 0:
+            self.WSi.setValue(self.roll20())
+            self.BSi.setValue(self.roll20())
+            self.Si.setValue(self.roll20())
+            self.Ti.setValue(self.roll20())
+            self.Ii.setValue(self.roll20())
+            self.Agi.setValue(self.roll20())
+            self.Dexi.setValue(self.roll20())
+            self.Inti.setValue(self.roll20())
+            self.WPi.setValue(self.roll20())
+            self.Feli.setValue(self.roll20())
+        elif self.Species.currentIndex() == 1:
+            self.WSi.setValue(self.roll30())
+            self.BSi.setValue(self.roll20())
+            self.Si.setValue(self.roll20())
+            self.Ti.setValue(self.roll30())
+            self.Ii.setValue(self.roll20())
+            self.Agi.setValue(self.roll10())
+            self.Dexi.setValue(self.roll30())
+            self.Inti.setValue(self.roll20())
+            self.WPi.setValue(self.roll40())
+            self.Feli.setValue(self.roll10())
+        elif self.Species.currentIndex() == 2:
+            self.WSi.setValue(self.roll10())
+            self.BSi.setValue(self.roll30())
+            self.Si.setValue(self.roll10())
+            self.Ti.setValue(self.roll20())
+            self.Ii.setValue(self.roll20())
+            self.Agi.setValue(self.roll20())
+            self.Dexi.setValue(self.roll30())
+            self.Inti.setValue(self.roll20())
+            self.WPi.setValue(self.roll30())
+            self.Feli.setValue(self.roll30())
+        else:
+            self.WSi.setValue(self.roll30())
+            self.BSi.setValue(self.roll30())
+            self.Si.setValue(self.roll20())
+            self.Ti.setValue(self.roll20())
+            self.Ii.setValue(self.roll40())
+            self.Agi.setValue(self.roll30())
+            self.Dexi.setValue(self.roll30())
+            self.Inti.setValue(self.roll30())
+            self.WPi.setValue(self.roll30())
+            self.Feli.setValue(self.roll20())
+
+    def roll10(self):
+        return random.randint(1, 10) + random.randint(1, 10) + 10
+
+    def roll20(self):
+        return random.randint(1, 10) + random.randint(1, 10) + 20
+
+    def roll30(self):
+        return random.randint(1, 10) + random.randint(1, 10) + 30
+
+    def roll40(self):
+        return random.randint(1, 10) + random.randint(1, 10) + 40
+
     def Suma(self, a, b):
         return a.value()+b.value()
 
@@ -821,7 +884,7 @@ class Window(QMainWindow):
     # --------------------------------------------------------------------------
 
     def impo(self):
-        if not os.path.isfile(self.response):
+        if os.path.isfile(self.response):
             stats = []
             with open(self.response, 'r') as f:
                 stats = f.read().splitlines()
