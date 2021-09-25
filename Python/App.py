@@ -1,13 +1,14 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 # UTF-8
 
-import sys, os
+import sys
+import os
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (QApplication, QComboBox, QLabel, QLineEdit,
                              QSpinBox, QVBoxLayout, QHBoxLayout, QGridLayout,
                              QFormLayout, QMainWindow, QStatusBar, QWidget,
-                             QFileDialog, QScrollArea, QPushButton, QMessageBox)
+                             QFileDialog, QScrollArea, QMessageBox)
 
 
 class Window(QMainWindow):
@@ -644,12 +645,6 @@ class Window(QMainWindow):
 
         # ----------------------------------------------------------------------
 
-    def ShowTalent(self):
-        self.TalentWindow.show()
-
-    def ShowSkill(self):
-        self.SkillWindow.show()
-
     def Suma(self, a, b):
         return a.value()+b.value()
 
@@ -816,22 +811,21 @@ class Window(QMainWindow):
     def help(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
-        msg.setText("Application for displaying and editing characters for " +
-                    "WFRP 4e with the possibility of exporting and importing.")
-        msg.setInformativeText('The above program uses files ' +
-                               'with the * .chr extension.')
+        msg.setText("Application for displaying and editing characters for "
+                    + "WFRP with the possibility of exporting and importing.")
+        msg.setInformativeText('The above program uses files '
+                               + 'with the * .chr extension.')
         msg.setWindowTitle("Help")
         msg.exec_()
 
     # --------------------------------------------------------------------------
 
     def impo(self):
-        if os.path.isfile(self.response) == True:
+        if not os.path.isfile(self.response):
             stats = []
             with open(self.response, 'r') as f:
                 stats = f.read().splitlines()
             f.close()
-            count = 0
             self.Name.setText(str(stats[0]))
             self.Species.setCurrentIndex(int(stats[1]))
             self.Classes.setCurrentIndex(int(stats[2]))
@@ -908,8 +902,8 @@ class Window(QMainWindow):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Critical)
             msg.setText("The file " + self.response + " was not found.")
-            msg.setInformativeText('Try to export the file or create it ' +
-                                   'manually and then try again.')
+            msg.setInformativeText('Try to export the file or create it '
+                                   + 'manually and then try again.')
             msg.setWindowTitle("Error")
             msg.exec_()
 
@@ -995,8 +989,8 @@ class Window(QMainWindow):
     # --------------------------------------------------------------------------
 
     def getFileName(self):
-        filename = QFileDialog.getOpenFileName(self, 'Select File', '',
-            'Character File (*.chr);; All Files (*)')[0]
+        filename = QFileDialog.getOpenFileName(
+            self, 'Select File', '', 'Character File(*.chr);; All Files(*)')[0]
         self.response = filename.split("/")[-1]
         self.setWindowTitle("Character Sheet - WFRP 4e - " + self.response)
 
