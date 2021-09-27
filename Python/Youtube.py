@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
 class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.Title = "Youtube music/video search."
+        self.Title = "Youtube music/video downloader."
         self.setFont(QFont('PatrickHand', 12))
         self.setWindowTitle(self.Title)
         self.resize(630, 1)
@@ -68,9 +68,12 @@ class Window(QMainWindow):
         self.imgL1.setPixmap(self.zdj1.scaled(200, 100))
         self.downMp1 = QPushButton("Pobierz mp3")
         self.downMp1.setFixedWidth(200)
+        self.downMv1 = QPushButton("Pobierz mp4")
+        self.downMv1.setFixedWidth(200)
         self.play1 = QPushButton("Odtwórz 30s")
         self.play1.setFixedWidth(200)
         self.downMp1.clicked.connect(lambda: self._do(self.id[0]))
+        self.downMv1.clicked.connect(lambda: self._dv(self.id[0]))
         self.play1.clicked.connect(lambda: self._pl(self.title[0], self.id[0]))
 
         # ----------------------------------------------------------------------
@@ -82,9 +85,12 @@ class Window(QMainWindow):
         self.imgL2.setPixmap(self.zdj2.scaled(200, 100))
         self.downMp2 = QPushButton("Pobierz mp3")
         self.downMp2.setFixedWidth(200)
+        self.downMv2 = QPushButton("Pobierz mp4")
+        self.downMv2.setFixedWidth(200)
         self.play2 = QPushButton("Odtwórz 30s")
         self.play2.setFixedWidth(200)
         self.downMp2.clicked.connect(lambda: self._do(self.id[1]))
+        self.downMv2.clicked.connect(lambda: self._dv(self.id[1]))
         self.play2.clicked.connect(lambda: self._pl(self.title[1], self.id[1]))
 
         # ----------------------------------------------------------------------
@@ -96,9 +102,12 @@ class Window(QMainWindow):
         self.imgL3.setPixmap(self.zdj3.scaled(200, 100))
         self.downMp3 = QPushButton("Pobierz mp3")
         self.downMp3.setFixedWidth(200)
+        self.downMv3 = QPushButton("Pobierz mp4")
+        self.downMv3.setFixedWidth(200)
         self.play3 = QPushButton("Odtwórz 30s")
         self.play3.setFixedWidth(200)
         self.downMp3.clicked.connect(lambda: self._do(self.id[2]))
+        self.downMv3.clicked.connect(lambda: self._dv(self.id[2]))
         self.play3.clicked.connect(lambda: self._pl(self.title[2], self.id[2]))
 
         # ----------------------------------------------------------------------
@@ -110,9 +119,12 @@ class Window(QMainWindow):
         self.imgL4.setPixmap(self.zdj4.scaled(200, 100))
         self.downMp4 = QPushButton("Pobierz mp3")
         self.downMp4.setFixedWidth(200)
+        self.downMv4 = QPushButton("Pobierz mp4")
+        self.downMv4.setFixedWidth(200)
         self.play4 = QPushButton("Odtwórz 30s")
         self.play4.setFixedWidth(200)
         self.downMp4.clicked.connect(lambda: self._do(self.id[3]))
+        self.downMv1.clicked.connect(lambda: self._dv(self.id[3]))
         self.play4.clicked.connect(lambda: self._pl(self.title[3], self.id[3]))
 
         # ----------------------------------------------------------------------
@@ -124,9 +136,12 @@ class Window(QMainWindow):
         self.imgL5.setPixmap(self.zdj5.scaled(200, 100))
         self.downMp5 = QPushButton("Pobierz mp3")
         self.downMp5.setFixedWidth(200)
+        self.downMv5 = QPushButton("Pobierz mp4")
+        self.downMv5.setFixedWidth(200)
         self.play5 = QPushButton("Odtwórz 30s")
         self.play5.setFixedWidth(200)
         self.downMp5.clicked.connect(lambda: self._do(self.id[4]))
+        self.downMv5.clicked.connect(lambda: self._dv(self.id[4]))
         self.play5.clicked.connect(lambda: self._pl(self.title[4], self.id[4]))
 
         # ----------------------------------------------------------------------
@@ -138,36 +153,49 @@ class Window(QMainWindow):
         self.imgL6.setPixmap(self.zdj6.scaled(200, 100))
         self.downMp6 = QPushButton("Pobierz mp3")
         self.downMp6.setFixedWidth(200)
+        self.downMv6 = QPushButton("Pobierz mp4")
+        self.downMv6.setFixedWidth(200)
         self.play6 = QPushButton("Odtwórz 30s")
         self.play6.setFixedWidth(200)
         self.downMp6.clicked.connect(lambda: self._do(self.id[5]))
+        self.downMv6.clicked.connect(lambda: self._dv(self.id[5]))
         self.play6.clicked.connect(lambda: self._pl(self.title[5], self.id[5]))
 
         # ----------------------------------------------------------------------
 
         self.video.addWidget(self.imgL1, 0, 0)
         self.video.addWidget(self.downMp1, 1, 0)
-        self.video.addWidget(self.play1, 2, 0)
-        self.video.addWidget(self.imgL4, 3, 0)
-        self.video.addWidget(self.downMp4, 4, 0)
-        self.video.addWidget(self.play4, 5, 0)
+        self.video.addWidget(self.downMv1, 2, 0)
+        self.video.addWidget(self.play1, 3, 0)
+        self.video.addWidget(self.imgL4, 4, 0)
+        self.video.addWidget(self.downMp4, 5, 0)
+        self.video.addWidget(self.downMv4, 6, 0)
+        self.video.addWidget(self.play4, 7, 0)
 
         self.video.addWidget(self.imgL2, 0, 1)
         self.video.addWidget(self.downMp2, 1, 1)
-        self.video.addWidget(self.play2, 2, 1)
-        self.video.addWidget(self.imgL5, 3, 1)
-        self.video.addWidget(self.downMp5, 4, 1)
-        self.video.addWidget(self.play5, 5, 1)
+        self.video.addWidget(self.downMv2, 2, 1)
+        self.video.addWidget(self.play2, 3, 1)
+        self.video.addWidget(self.imgL5, 4, 1)
+        self.video.addWidget(self.downMp5, 5, 1)
+        self.video.addWidget(self.downMv5, 6, 1)
+        self.video.addWidget(self.play5, 7, 1)
 
         self.video.addWidget(self.imgL3, 0, 2)
         self.video.addWidget(self.downMp3, 1, 2)
-        self.video.addWidget(self.play3, 2, 2)
-        self.video.addWidget(self.imgL6, 3, 2)
-        self.video.addWidget(self.downMp6, 4, 2)
-        self.video.addWidget(self.play6, 5, 2)
+        self.video.addWidget(self.downMv3, 2, 2)
+        self.video.addWidget(self.play3, 3, 2)
+        self.video.addWidget(self.imgL6, 4, 2)
+        self.video.addWidget(self.downMp6, 5, 2)
+        self.video.addWidget(self.downMv6, 6, 2)
+        self.video.addWidget(self.play6, 7, 2)
 
     def _do(self, id):
         os.system("youtube-dl -x --audio-format=mp3 -o '%(title)s.%(ext)s' '"
+                  + id + "'")
+
+    def _dv(self, id):
+        os.system("youtube-dl -f mp4 -o '%(title)s.%(ext)s' '"
                   + id + "'")
 
     def _pl(self, title, id):
