@@ -191,16 +191,24 @@ class Window(QMainWindow):
         self.video.addWidget(self.play6, 7, 2)
 
     def _do(self, id):
-        os.system("youtube-dl -x --audio-format=mp3 -o '%(title)s.%(ext)s' '"
-                  + id + "'")
+        os.system("youtube-dl -x --audio-format=mp3"
+                  + " -o '%(title)s.%(ext)s' '"
+                  + id + "'"
+                  )
 
     def _dv(self, id):
-        os.system("youtube-dl -f mp4 -o '%(title)s.%(ext)s' '"
-                  + id + "'")
+        os.system("youtube-dl -f mp4"
+                  + " -o '%(title)s.%(ext)s' '"
+                  + id + "'"
+                  )
 
     def _pl(self, title, id):
-        os.system("youtube-dl -x --postprocessor-args '-ss 00:00:00.00 -t "
-                  + "00:00:30.00' --audio-format=mp3 '" + id + "'")
+        os.system(
+            "youtube-dl -x"
+            + " --postprocessor-args '-ss 00:00:00.00 -t 00:00:30.00'"
+            + " --audio-format=mp3 '"
+            + id + "'"
+            )
         playsound(title + "-" + id + ".mp3")
         os.system("rm '" + title + "-" + id + ".mp3'")
 
