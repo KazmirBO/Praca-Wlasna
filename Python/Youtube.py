@@ -5,10 +5,12 @@
 import os
 import sys
 import requests
-from playsound import playsound
+import vlc
+import pafy
+from PyQt5 import QtCore
 from youtube_search import YoutubeSearch
 from PyQt5.QtGui import QFont, QImage, QPixmap
-from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
+from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QMessageBox,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout)
 
@@ -33,6 +35,12 @@ class Window(QMainWindow):
         self.main = QVBoxLayout()
         self.video = QGridLayout()
         self.search = QHBoxLayout()
+        self.controls = QHBoxLayout()
+
+        self.butt1 = QPushButton("Pauza/Wznów")
+        self.butt2 = QPushButton("Zatrzymaj")
+        self.controls.addWidget(self.butt1)
+        self.controls.addWidget(self.butt2)
 
         self.text = QLineEdit()
         self.button = QPushButton("Szukaj")
@@ -42,7 +50,17 @@ class Window(QMainWindow):
 
         self.main.addLayout(self.search)
         self.main.addLayout(self.video)
+
+        self.kon = QLabel("Kontrolki do odtwarzacza")
+        self.kon.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.main.addWidget(self.kon)
+        self.main.addLayout(self.controls)
         self.generalLayout.addLayout(self.main)
+
+        self.curr_play = 0
+
+        # ----------------------------------------------------------------------
 
     def _getVideo(self):
         for i in reversed(range(self.video.count())):
@@ -70,11 +88,11 @@ class Window(QMainWindow):
         self.downMp1.setFixedWidth(200)
         self.downMv1 = QPushButton("Pobierz mp4")
         self.downMv1.setFixedWidth(200)
-        self.play1 = QPushButton("Odtwórz 30s")
-        self.play1.setFixedWidth(200)
+        self.p1 = QPushButton("Odtwórz")
+        self.p1.setFixedWidth(200)
         self.downMp1.clicked.connect(lambda: self._do(self.id[0]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[0]))
-        self.play1.clicked.connect(lambda: self._pl(self.title[0], self.id[0]))
+        self.p1.clicked.connect(lambda: self._pl(self.id[0]))
 
         # ----------------------------------------------------------------------
 
@@ -87,11 +105,11 @@ class Window(QMainWindow):
         self.downMp2.setFixedWidth(200)
         self.downMv2 = QPushButton("Pobierz mp4")
         self.downMv2.setFixedWidth(200)
-        self.play2 = QPushButton("Odtwórz 30s")
-        self.play2.setFixedWidth(200)
+        self.p2 = QPushButton("Odtwórz")
+        self.p2.setFixedWidth(200)
         self.downMp2.clicked.connect(lambda: self._do(self.id[1]))
         self.downMv2.clicked.connect(lambda: self._dv(self.id[1]))
-        self.play2.clicked.connect(lambda: self._pl(self.title[1], self.id[1]))
+        self.p2.clicked.connect(lambda: self._pl(self.id[1]))
 
         # ----------------------------------------------------------------------
 
@@ -104,11 +122,11 @@ class Window(QMainWindow):
         self.downMp3.setFixedWidth(200)
         self.downMv3 = QPushButton("Pobierz mp4")
         self.downMv3.setFixedWidth(200)
-        self.play3 = QPushButton("Odtwórz 30s")
-        self.play3.setFixedWidth(200)
+        self.p3 = QPushButton("Odtwórz")
+        self.p3.setFixedWidth(200)
         self.downMp3.clicked.connect(lambda: self._do(self.id[2]))
         self.downMv3.clicked.connect(lambda: self._dv(self.id[2]))
-        self.play3.clicked.connect(lambda: self._pl(self.title[2], self.id[2]))
+        self.p3.clicked.connect(lambda: self._pl(self.id[2]))
 
         # ----------------------------------------------------------------------
 
@@ -121,11 +139,11 @@ class Window(QMainWindow):
         self.downMp4.setFixedWidth(200)
         self.downMv4 = QPushButton("Pobierz mp4")
         self.downMv4.setFixedWidth(200)
-        self.play4 = QPushButton("Odtwórz 30s")
-        self.play4.setFixedWidth(200)
+        self.p4 = QPushButton("Odtwórz")
+        self.p4.setFixedWidth(200)
         self.downMp4.clicked.connect(lambda: self._do(self.id[3]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[3]))
-        self.play4.clicked.connect(lambda: self._pl(self.title[3], self.id[3]))
+        self.p4.clicked.connect(lambda: self._pl(self.id[3]))
 
         # ----------------------------------------------------------------------
 
@@ -138,11 +156,11 @@ class Window(QMainWindow):
         self.downMp5.setFixedWidth(200)
         self.downMv5 = QPushButton("Pobierz mp4")
         self.downMv5.setFixedWidth(200)
-        self.play5 = QPushButton("Odtwórz 30s")
-        self.play5.setFixedWidth(200)
+        self.p5 = QPushButton("Odtwórz")
+        self.p5.setFixedWidth(200)
         self.downMp5.clicked.connect(lambda: self._do(self.id[4]))
         self.downMv5.clicked.connect(lambda: self._dv(self.id[4]))
-        self.play5.clicked.connect(lambda: self._pl(self.title[4], self.id[4]))
+        self.p5.clicked.connect(lambda: self._pl(self.id[4]))
 
         # ----------------------------------------------------------------------
 
@@ -155,62 +173,90 @@ class Window(QMainWindow):
         self.downMp6.setFixedWidth(200)
         self.downMv6 = QPushButton("Pobierz mp4")
         self.downMv6.setFixedWidth(200)
-        self.play6 = QPushButton("Odtwórz 30s")
-        self.play6.setFixedWidth(200)
+        self.p6 = QPushButton("Odtwórz")
+        self.p6.setFixedWidth(200)
         self.downMp6.clicked.connect(lambda: self._do(self.id[5]))
         self.downMv6.clicked.connect(lambda: self._dv(self.id[5]))
-        self.play6.clicked.connect(lambda: self._pl(self.title[5], self.id[5]))
+        self.p6.clicked.connect(lambda: self._pl(self.id[5]))
 
         # ----------------------------------------------------------------------
 
         self.video.addWidget(self.imgL1, 0, 0)
         self.video.addWidget(self.downMp1, 1, 0)
         self.video.addWidget(self.downMv1, 2, 0)
-        self.video.addWidget(self.play1, 3, 0)
+        self.video.addWidget(self.p1, 3, 0)
         self.video.addWidget(self.imgL4, 4, 0)
         self.video.addWidget(self.downMp4, 5, 0)
         self.video.addWidget(self.downMv4, 6, 0)
-        self.video.addWidget(self.play4, 7, 0)
+        self.video.addWidget(self.p4, 7, 0)
 
         self.video.addWidget(self.imgL2, 0, 1)
         self.video.addWidget(self.downMp2, 1, 1)
         self.video.addWidget(self.downMv2, 2, 1)
-        self.video.addWidget(self.play2, 3, 1)
+        self.video.addWidget(self.p2, 3, 1)
         self.video.addWidget(self.imgL5, 4, 1)
         self.video.addWidget(self.downMp5, 5, 1)
         self.video.addWidget(self.downMv5, 6, 1)
-        self.video.addWidget(self.play5, 7, 1)
+        self.video.addWidget(self.p5, 7, 1)
 
         self.video.addWidget(self.imgL3, 0, 2)
         self.video.addWidget(self.downMp3, 1, 2)
         self.video.addWidget(self.downMv3, 2, 2)
-        self.video.addWidget(self.play3, 3, 2)
+        self.video.addWidget(self.p3, 3, 2)
         self.video.addWidget(self.imgL6, 4, 2)
         self.video.addWidget(self.downMp6, 5, 2)
         self.video.addWidget(self.downMv6, 6, 2)
-        self.video.addWidget(self.play6, 7, 2)
+        self.video.addWidget(self.p6, 7, 2)
 
     def _do(self, id):
         os.system("youtube-dl -x --audio-format=mp3"
                   + " -o '%(title)s.%(ext)s' '"
-                  + id + "'"
-                  )
+                  + id + "'")
 
     def _dv(self, id):
         os.system("youtube-dl -f mp4"
                   + " -o '%(title)s.%(ext)s' '"
-                  + id + "'"
-                  )
+                  + id + "'")
 
-    def _pl(self, title, id):
+    def _pl(self, url):
+        if self.curr_play == 0:
+            self.curr_play = 1
+            video = pafy.new("https://www.youtube.com/watch?v=" + url)
+            best = video.getbest()
+            playurl = best.url
+            Instance = vlc.Instance()
+            self.player = Instance.media_player_new()
+            Media = Instance.media_new(playurl)
+            Media.get_mrl()
+            self.player.set_media(Media)
+            self.player.play()
+            self.butt1.clicked.connect(lambda: self.pause())
+            self.butt2.clicked.connect(lambda: self.stop())
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Critical)
+            msg.setText("Aby odtworzyć nowy utwór kliknij 'Zatrzymaj'.")
+            msg.setInformativeText('Aktualnie odtwarzany jest inny utówr. \n'
+                                   + 'Aby uruchomić inny utwór, zatrzymaj '
+                                   + 'poprzedni i spróbuj ponownie.')
+            msg.setWindowTitle("Błąd odtwarzacza!")
+            msg.exec_()
+
+    def pause(self):
+        self.player.pause()
+
+    def stop(self):
+        self.player.stop()
+        self.curr_play = 0
+
+    """def _pl(self, title, id):
         os.system(
             "youtube-dl -x"
-            + " --postprocessor-args '-ss 00:00:00.00 -t 00:00:30.00'"
             + " --audio-format=mp3 '"
             + id + "'"
             )
         playsound(title + "-" + id + ".mp3")
-        os.system("rm '" + title + "-" + id + ".mp3'")
+        os.system("rm '" + title + "-" + id + ".mp3'")"""
 
     def _createMenu(self):
         self.menu = self.menuBar().addMenu("&Menu")
