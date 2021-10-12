@@ -43,6 +43,7 @@ class Window(QMainWindow):
         self.controls.addWidget(self.butt2)
 
         self.text = QLineEdit()
+        self.text.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
         self.button = QPushButton("Szukaj")
         self.button.clicked.connect(self._getVideo)
         self.search.addWidget(self.text)
