@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout)
 
+
 __version__ = "v. 0.1.3"
 __author__ = "Sebastian Kolanowski"
 
