@@ -1,6 +1,8 @@
 CREATE TABLE gry (
-    id     INTEGER PRIMARY KEY AUTO_INCREMENT,
-    nazwa  VARCHAR(50) NOT NULL
+    id      INTEGER PRIMARY KEY AUTO_INCREMENT,
+    nazwa   VARCHAR(150) NOT NULL,
+    wydawca VARCHAR(100),
+    box_id  VARCHAR(10)
 );
 
 
@@ -22,10 +24,15 @@ CREATE TABLE wyp (
 
 ALTER TABLE wyp
     ADD CONSTRAINT wyp_gry_fk FOREIGN KEY ( gry_id )
-        REFERENCES gry ( id );
+        REFERENCES gry ( id )
+        ON DELETE CASCADE
+        ON UPDATE CASCADE;
+
 
 ALTER TABLE wyp
     ADD CONSTRAINT wyp_kto_fk FOREIGN KEY ( kto_id )
-        REFERENCES kto ( id );
+        REFERENCES kto ( id )
+        ON DELETE CASCADE
+        ON UPDATE CASCADE;
 
 --- UPDATE kto SET imie='',nazwisko='',telefon= WHERE id=;
