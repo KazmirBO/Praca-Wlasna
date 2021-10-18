@@ -8,15 +8,16 @@ import requests
 import vlc
 import pafy
 from pathlib import Path
-from PyQt5 import QtCore
 from youtube_search import YoutubeSearch
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QImage, QPixmap
-from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
+from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
-                             QStatusBar, QApplication, QGridLayout)
+                             QStatusBar, QApplication, QGridLayout, QLCDNumber)
 
 
-__version__ = "v. 0.1.3"
+__version__ = "v. 0.1.4"
 __author__ = "Sebastian Kolanowski"
 
 
@@ -32,6 +33,8 @@ class Window(QMainWindow):
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
         self.downloads_path = str(Path.home() / "Downloads")
+        self.Instance = vlc.Instance('--no-video')
+        self.player = self.Instance.media_player_new()
 
         self._createMenu()
         self._createDisplay()
@@ -45,8 +48,20 @@ class Window(QMainWindow):
 
         self.butt1 = QPushButton("Pauza/Wznów")
         self.butt2 = QPushButton("Zatrzymaj")
+        self.volText = QLabel("Volume: ")
+        self.volText.setFixedWidth(50)
+        self.volVal = QLCDNumber()
+        self.volVal.display(100)
+        self.volVal.setFixedWidth(70)
+        self.volVal.setFixedHeight(30)
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setValue(100)
+        self.slider.setFixedWidth(150)
         self.controls.addWidget(self.butt1)
         self.controls.addWidget(self.butt2)
+        self.controls.addWidget(self.volText)
+        self.controls.addWidget(self.slider)
+        self.controls.addWidget(self.volVal)
 
         self.text = QLineEdit()
         self.text.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
@@ -232,14 +247,13 @@ class Window(QMainWindow):
         video = pafy.new("https://www.youtube.com/watch?v=" + url)
         best = video.getbest()
         playurl = best.url
-        Instance = vlc.Instance('--no-video')
-        self.player = Instance.media_player_new()
-        Media = Instance.media_new(playurl)
+        Media = self.Instance.media_new(playurl)
         Media.get_mrl()
         self.player.set_media(Media)
         self.player.play()
         self.butt1.clicked.connect(lambda: self.pause())
         self.butt2.clicked.connect(lambda: self.stop())
+        self.slider.valueChanged.connect(self._volume)
 
     def pause(self):
         self.player.pause()
@@ -248,14 +262,9 @@ class Window(QMainWindow):
         self.player.stop()
         self.curr_play = 0
 
-    """def _pl(self, title, id):
-        os.system(
-            "youtube-dl -x"
-            + " --audio-format=mp3 '"
-            + id + "'"
-            )
-        playsound(title + "-" + id + ".mp3")
-        os.system("rm '" + title + "-" + id + ".mp3'")"""
+    def _volume(self):
+        self.player.audio_set_volume(self.slider.value())
+        self.volVal.display(self.slider.value())
 
     def _createMenu(self):
         self.menu = self.menuBar().addMenu("&Menu")
