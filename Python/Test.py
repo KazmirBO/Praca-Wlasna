@@ -1,97 +1,181 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#! /usr/bin/python
 
-import os
+#
+# Qt example for VLC Python bindings
+# Copyright (C) 2009-2010 the VideoLAN team
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+#
+
 import sys
-import platform
-# from PyQt5 import *
-# from PyQt5.QtGui import *
-from PyQt5.QtWidgets import (QHBoxLayout, QWidget, QGridLayout, QSpinBox,
-                             QMainWindow, QApplication, QLineEdit)
+import vlc
+from PyQt4 import QtGui, QtCore
 
 
-class Main(QMainWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.Title = "Test program"
-        self.setWindowTitle(self.Title)
-        self.resize(1, 1)
-        self.generalLayout = QHBoxLayout()
-        self._centralWidget = QWidget(self)
-        self._centralWidget.setLayout(self.generalLayout)
-        self.setCentralWidget(self._centralWidget)
-        self._createDisplay()
-        pass
+class Player(QtGui.QMainWindow):
+    def __init__(self, master=None):
+        QtGui.QMainWindow.__init__(self, master)
+        self.setWindowTitle("Media Player")
 
-    def __del__(self):
-        self.expo()
-        pass
+        # creating a basic vlc instance
+        self.instance = vlc.Instance()
+        # creating an empty vlc media player
+        self.mediaplayer = self.instance.media_player_new()
 
-    def _createDisplay(self):
-        self.main = QGridLayout()
-        self.count = QSpinBox()
-        self.count.setFixedWidth(50)
-        self.count.valueChanged.connect(self.create)
-        self.impo()
-        self.generalLayout.addWidget(self.count)
-        self.generalLayout.addLayout(self.main)
-        pass
+        self.createUI()
+        self.isPaused = False
 
-    def create(self):
-        i = 0
-        self.max = int(self.count.value())
-        if self.max >= 0:
-            for i in reversed(range(self.main.count())):
-                self.main.itemAt(i).widget().setParent(None)
-                pass
-            pass
-        for i in range(self.max):
-            self.main.addWidget(QLineEdit(), int(i % 2), int(i/2))
-            pass
-        pass
+    def createUI(self):
+        self.widget = QtGui.QWidget(self)
+        self.setCentralWidget(self.widget)
 
-    def impo(self):
-        if platform.system() == 'Linux':
-            self.response = '/tmp/test.txt'
-            if not os.path.isfile(self.response):
-                f = open(self.response, 'w')
-                f.write("0")
-                f.close()
-                pass
-            pass
-        elif platform.system() == 'Windows':
-            self.response = './test.txt'
-            if not os.path.isfile(self.response):
-                f = open(self.response, 'w')
-                f.write("0")
-                f.close()
-                pass
-            pass
-        pass
+        # In this widget, the video will be drawn
+        self.videoframe = QtGui.QFrame()
+        self.palette = self.videoframe.palette()
+        self.palette.setColor(QtGui.QPalette.Window,
+                              QtGui.QColor(0, 0, 0))
+        self.videoframe.setPalette(self.palette)
+        self.videoframe.setAutoFillBackground(True)
 
-        stats = []
-        with open(self.response, 'r') as f:
-            stats = f.read().splitlines()
-        f.close()
-        self.count.setValue(int(stats[0]))
-        pass
+        self.positionslider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
+        self.positionslider.setToolTip("Position")
+        self.positionslider.setMaximum(1000)
+        self.connect(self.positionslider,
+                     QtCore.SIGNAL("sliderMoved(int)"), self.setPosition)
 
-    def expo(self):
-        with open(self.response, 'w') as f:
-            # f.write('%s\n' % value/text())
-            f.write('%s\n' % self.max)
-        pass
+        self.hbuttonbox = QtGui.QHBoxLayout()
+        self.playbutton = QtGui.QPushButton("Play")
+        self.hbuttonbox.addWidget(self.playbutton)
+        self.connect(self.playbutton, QtCore.SIGNAL("clicked()"),
+                     self.PlayPause)
 
-    pass
+        self.stopbutton = QtGui.QPushButton("Stop")
+        self.hbuttonbox.addWidget(self.stopbutton)
+        self.connect(self.stopbutton, QtCore.SIGNAL("clicked()"),
+                     self.Stop)
+
+        self.hbuttonbox.addStretch(1)
+        self.volumeslider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
+        self.volumeslider.setMaximum(100)
+        self.volumeslider.setValue(self.mediaplayer.audio_get_volume())
+        self.volumeslider.setToolTip("Volume")
+        self.hbuttonbox.addWidget(self.volumeslider)
+        self.connect(self.volumeslider,
+                     QtCore.SIGNAL("valueChanged(int)"),
+                     self.setVolume)
+
+        self.vboxlayout = QtGui.QVBoxLayout()
+        self.vboxlayout.addWidget(self.videoframe)
+        self.vboxlayout.addWidget(self.positionslider)
+        self.vboxlayout.addLayout(self.hbuttonbox)
+
+        self.widget.setLayout(self.vboxlayout)
+
+        open = QtGui.QAction("&Open", self)
+        self.connect(open, QtCore.SIGNAL("triggered()"), self.OpenFile)
+        exit = QtGui.QAction("&Exit", self)
+        self.connect(exit, QtCore.SIGNAL("triggered()"), sys.exit)
+        menubar = self.menuBar()
+        filemenu = menubar.addMenu("&File")
+        filemenu.addAction(open)
+        filemenu.addSeparator()
+        filemenu.addAction(exit)
+
+        self.timer = QtCore.QTimer(self)
+        self.timer.setInterval(200)
+        self.connect(self.timer, QtCore.SIGNAL("timeout()"),
+                     self.updateUI)
+
+    def PlayPause(self):
+        if self.mediaplayer.is_playing():
+            self.mediaplayer.pause()
+            self.playbutton.setText("Play")
+            self.isPaused = True
+        else:
+            if self.mediaplayer.play() == -1:
+                self.OpenFile()
+                return
+            self.mediaplayer.play()
+            self.playbutton.setText("Pause")
+            self.timer.start()
+            self.isPaused = False
+
+    def Stop(self):
+        self.mediaplayer.stop()
+        self.playbutton.setText("Play")
+
+    def OpenFile(self, filename=None):
+        if filename is None:
+            filename = QtGui.QFileDialog.getOpenFileName(
+                self, "Open File")
+        if not filename:
+            return
+
+        # create the media
+        self.media = self.instance.media_new(filename)
+        # put the media in the media player
+        self.mediaplayer.set_media(self.media)
+
+        # parse the metadata of the file
+        self.media.parse()
+        # set the title of the track as window title
+        self.setWindowTitle(self.media.get_meta(0))
+
+        # the media player has to be 'connected' to the QFrame
+        # (otherwise a video would be displayed in it's own window)
+        # this is platform specific!
+        # you have to give the id of the QFrame (or similar object) to
+        # vlc, different platforms have different functions for this
+        if sys.platform == "linux2":  # for Linux using the X Server
+            self.mediaplayer.set_xwindow(self.videoframe.winId())
+        elif sys.platform == "win32":  # for Windows
+            self.mediaplayer.set_hwnd(self.videoframe.winId())
+        elif sys.platform == "darwin":  # for MacOS
+            self.mediaplayer.set_agl(self.videoframe.windId())
+        self.PlayPause()
+
+    def setVolume(self, Volume):
+        self.mediaplayer.audio_set_volume(Volume)
+
+    def setPosition(self, position):
+        # setting the position to where the slider was dragged
+        self.mediaplayer.set_position(position / 1000.0)
+        # the vlc MediaPlayer needs a float value between 0 and 1, Qt
+        # uses integer variables, so you need a factor; the higher the
+        # factor, the more precise are the results
+        # (1000 should be enough)
+
+    def updateUI(self):
+        # setting the slider to the desired position
+        self.positionslider.setValue(self.mediaplayer.get_position() * 1000)
+
+        if not self.mediaplayer.is_playing():
+            # no need to call this function if nothing is played
+            self.timer.stop()
+            if not self.isPaused:
+                # after the video finished, the play button stills shows
+                # "Pause", not the desired behavior of a media player
+                # this will fix it
+                self.Stop()
 
 
-def window():
-    app = QApplication(sys.argv)
-    window = Main()
-    window.show()
+if __name__ == "__main__":
+    app = QtGui.QApplication(sys.argv)
+    player = Player()
+    player.show()
+    player.resize(640, 480)
+    if sys.argv[1:]:
+        player.OpenFile(sys.argv[1])
     sys.exit(app.exec_())
-    pass
-
-
-if __name__ == '__main__':
-    window()
