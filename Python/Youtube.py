@@ -7,12 +7,16 @@ import sys
 import requests
 import vlc
 import pafy
+from pathlib import Path
 from PyQt5 import QtCore
 from youtube_search import YoutubeSearch
 from PyQt5.QtGui import QFont, QImage, QPixmap
-from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QMessageBox,
+from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout)
+
+__version__ = "v. 0.1.3"
+__author__ = "Sebastian Kolanowski"
 
 
 class Window(QMainWindow):
@@ -21,11 +25,12 @@ class Window(QMainWindow):
         self.Title = "Youtube music/video downloader."
         self.setFont(QFont('PatrickHand', 12))
         self.setWindowTitle(self.Title)
-        self.resize(630, 1)
+        self.resize(630, 693)
         self.generalLayout = QHBoxLayout()
         self._centralWidget = QWidget(self)
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
+        self.downloads_path = str(Path.home() / "Downloads")
 
         self._createMenu()
         self._createDisplay()
@@ -211,37 +216,29 @@ class Window(QMainWindow):
 
     def _do(self, id):
         os.system("youtube-dl -x --audio-format=mp3"
-                  + " -o '%(title)s.%(ext)s' '"
+                  + " -o '" + self.downloads_path + "/%(title)s.%(ext)s' '"
                   + id + "'")
 
     def _dv(self, id):
         os.system("youtube-dl -f mp4"
-                  + " -o '%(title)s.%(ext)s' '"
+                  + " -o '" + self.downloads_path + "/%(title)s.%(ext)s' '"
                   + id + "'")
 
     def _pl(self, url):
-        if self.curr_play == 0:
-            self.curr_play = 1
-            video = pafy.new("https://www.youtube.com/watch?v=" + url)
-            best = video.getbest()
-            playurl = best.url
-            Instance = vlc.Instance()
-            self.player = Instance.media_player_new()
-            Media = Instance.media_new(playurl)
-            Media.get_mrl()
-            self.player.set_media(Media)
-            self.player.play()
-            self.butt1.clicked.connect(lambda: self.pause())
-            self.butt2.clicked.connect(lambda: self.stop())
-        else:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Critical)
-            msg.setText("Aby odtworzyć nowy utwór kliknij 'Zatrzymaj'.")
-            msg.setInformativeText('Aktualnie odtwarzany jest inny utówr. \n'
-                                   + 'Aby uruchomić inny utwór, zatrzymaj '
-                                   + 'poprzedni i spróbuj ponownie.')
-            msg.setWindowTitle("Błąd odtwarzacza!")
-            msg.exec_()
+        if self.curr_play == 1:
+            self.stop()
+        self.curr_play = 1
+        video = pafy.new("https://www.youtube.com/watch?v=" + url)
+        best = video.getbest()
+        playurl = best.url
+        Instance = vlc.Instance('--no-video')
+        self.player = Instance.media_player_new()
+        Media = Instance.media_new(playurl)
+        Media.get_mrl()
+        self.player.set_media(Media)
+        self.player.play()
+        self.butt1.clicked.connect(lambda: self.pause())
+        self.butt2.clicked.connect(lambda: self.stop())
 
     def pause(self):
         self.player.pause()
@@ -265,7 +262,8 @@ class Window(QMainWindow):
 
     def _createStatusBar(self):
         status = QStatusBar()
-        status.showMessage("Hello World!")
+        status.showMessage("Version: " + __version__
+                           + ", Author: " + __author__)
         self.setStatusBar(status)
 
 
