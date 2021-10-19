@@ -8,6 +8,7 @@ import requests
 import vlc
 import pafy
 import youtube_dl
+import platform
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
@@ -15,10 +16,11 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QImage, QPixmap
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
-                             QStatusBar, QApplication, QGridLayout, QLCDNumber)
+                             QStatusBar, QApplication, QGridLayout, QLCDNumber,
+                             )
 
 
-__version__ = "v0.1.5"
+__version__ = "v0.1.6"
 __author__ = "Sebastian Kolanowski"
 
 
@@ -28,12 +30,17 @@ class Window(QMainWindow):
         self.Title = "Youtube music/video downloader."
         self.setFont(QFont('PatrickHand', 12))
         self.setWindowTitle(self.Title)
-        self.resize(630, 693)
+        self.resize(630, 1)
         self.generalLayout = QHBoxLayout()
         self._centralWidget = QWidget(self)
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
+        self.platform = platform.system()
         self.downloads_path = str(Path.home() / "Downloads")
+        if self.platform == "Windows":
+            self.downloads_path += "\\"
+        else:
+            self.downloads_path += "/"
         self.Instance = vlc.Instance('--no-video')
         self.player = self.Instance.media_player_new()
 
@@ -74,10 +81,18 @@ class Window(QMainWindow):
         self.main.addLayout(self.search)
         self.main.addLayout(self.video)
 
+        self.played = QLabel()
+        self.played.setText("Nic nie jest odtwarzane...")
+        self.played.setAlignment(QtCore.Qt.AlignCenter)
+
         self.kon = QLabel("Kontrolki do odtwarzacza")
         self.kon.setAlignment(QtCore.Qt.AlignCenter)
 
+        self.proBar = QSlider(Qt.Horizontal)
+
+        self.main.addWidget(self.played)
         self.main.addWidget(self.kon)
+        self.main.addWidget(self.proBar)
         self.main.addLayout(self.controls)
         self.generalLayout.addLayout(self.main)
 
@@ -115,7 +130,7 @@ class Window(QMainWindow):
         self.p1.setFixedWidth(200)
         self.downMp1.clicked.connect(lambda: self._do(self.id[0]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[0]))
-        self.p1.clicked.connect(lambda: self._pl(self.id[0]))
+        self.p1.clicked.connect(lambda: self._pl(self.id[0], self.title[0]))
 
         # ---------------------------------------------------------------------
 
@@ -132,7 +147,7 @@ class Window(QMainWindow):
         self.p2.setFixedWidth(200)
         self.downMp2.clicked.connect(lambda: self._do(self.id[1]))
         self.downMv2.clicked.connect(lambda: self._dv(self.id[1]))
-        self.p2.clicked.connect(lambda: self._pl(self.id[1]))
+        self.p2.clicked.connect(lambda: self._pl(self.id[1], self.title[1]))
 
         # ---------------------------------------------------------------------
 
@@ -149,7 +164,7 @@ class Window(QMainWindow):
         self.p3.setFixedWidth(200)
         self.downMp3.clicked.connect(lambda: self._do(self.id[2]))
         self.downMv3.clicked.connect(lambda: self._dv(self.id[2]))
-        self.p3.clicked.connect(lambda: self._pl(self.id[2]))
+        self.p3.clicked.connect(lambda: self._pl(self.id[2], self.title[2]))
 
         # ---------------------------------------------------------------------
 
@@ -166,7 +181,7 @@ class Window(QMainWindow):
         self.p4.setFixedWidth(200)
         self.downMp4.clicked.connect(lambda: self._do(self.id[3]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[3]))
-        self.p4.clicked.connect(lambda: self._pl(self.id[3]))
+        self.p4.clicked.connect(lambda: self._pl(self.id[3], self.title[3]))
 
         # ---------------------------------------------------------------------
 
@@ -183,7 +198,7 @@ class Window(QMainWindow):
         self.p5.setFixedWidth(200)
         self.downMp5.clicked.connect(lambda: self._do(self.id[4]))
         self.downMv5.clicked.connect(lambda: self._dv(self.id[4]))
-        self.p5.clicked.connect(lambda: self._pl(self.id[4]))
+        self.p5.clicked.connect(lambda: self._pl(self.id[4], self.title[4]))
 
         # ---------------------------------------------------------------------
 
@@ -200,7 +215,7 @@ class Window(QMainWindow):
         self.p6.setFixedWidth(200)
         self.downMp6.clicked.connect(lambda: self._do(self.id[5]))
         self.downMv6.clicked.connect(lambda: self._dv(self.id[5]))
-        self.p6.clicked.connect(lambda: self._pl(self.id[5]))
+        self.p6.clicked.connect(lambda: self._pl(self.id[5], self.title[5]))
 
         # ---------------------------------------------------------------------
 
@@ -237,11 +252,11 @@ class Window(QMainWindow):
 
         # ---------------------------------------------------------------------
 
-        # <==> TESTED <===========================================> TESTED <==>
+        # <===> TESTED <=========================================> TESTED <===>
 
     def _do(self, id):
-        ydl_opts = {'outtmpl': self.downloads_path + '/%(title)s.%(ext)s',
-                    'audio-format': 'bestaudio/best',
+        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
+                    'audio-format': 'bestaudio',
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
                         'preferredcodec': 'mp3',
@@ -250,22 +265,23 @@ class Window(QMainWindow):
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([id])
 
-        # <==> TESTED <===========================================> TESTED <==>
+        # <===> TESTED <=========================================> TESTED <===>
 
     def _dv(self, id):
-        ydl_opts = {'outtmpl': self.downloads_path + '/%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
                     'format': 'best'}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([id])
 
-        # <==> TESTED <===========================================> TESTED <==>
+        # <===> TESTED <=========================================> TESTED <===>
 
         # ---------------------------------------------------------------------
 
-    def _pl(self, id):
+    def _pl(self, id, title):
         if self.curr_play == 1:
             self.stop()
         self.curr_play = 1
+        self.played.setText("Teraz odtwarzane: " + title)
         video = pafy.new("https://www.youtube.com/watch?v=" + id)
         best = video.getbest()
         playurl = best.url
@@ -276,6 +292,7 @@ class Window(QMainWindow):
         self.butt1.clicked.connect(lambda: self.pause())
         self.butt2.clicked.connect(lambda: self.stop())
         self.slider.valueChanged.connect(self._volume)
+        self.proBar.valueChanged.connect(self.progress)
 
         # ---------------------------------------------------------------------
 
@@ -284,8 +301,14 @@ class Window(QMainWindow):
 
         # ---------------------------------------------------------------------
 
+    def progress(self):
+        self.player.set_position(self.proBar.value()/100)
+
+        # ---------------------------------------------------------------------
+
     def stop(self):
         self.player.stop()
+        self.played.setText("Nic nie jest odtwarzane...")
         self.curr_play = 0
 
         # ---------------------------------------------------------------------
