@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # github.com/joetats/youtube_search/blob/master/youtube_search/__init__.py
+# https://stackoverflow.com/questions/18054500/how-to-use-youtube-dl-from-a-python-program
 
-import os
 import sys
 import requests
 import vlc
 import pafy
+import youtube_dl
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
@@ -17,7 +18,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QStatusBar, QApplication, QGridLayout, QLCDNumber)
 
 
-__version__ = "v. 0.1.4"
+__version__ = "v0.1.5"
 __author__ = "Sebastian Kolanowski"
 
 
@@ -82,7 +83,7 @@ class Window(QMainWindow):
 
         self.curr_play = 0
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
     def _getVideo(self):
         for i in reversed(range(self.video.count())):
@@ -99,7 +100,7 @@ class Window(QMainWindow):
             self.title.append(v['title'])
             self.mylist.append(v['thumbnails'][0])
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image1 = QImage()
         self.image1.loadFromData(requests.get(self.mylist[0]).content)
@@ -116,7 +117,7 @@ class Window(QMainWindow):
         self.downMv1.clicked.connect(lambda: self._dv(self.id[0]))
         self.p1.clicked.connect(lambda: self._pl(self.id[0]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image2 = QImage()
         self.image2.loadFromData(requests.get(self.mylist[1]).content)
@@ -133,7 +134,7 @@ class Window(QMainWindow):
         self.downMv2.clicked.connect(lambda: self._dv(self.id[1]))
         self.p2.clicked.connect(lambda: self._pl(self.id[1]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image3 = QImage()
         self.image3.loadFromData(requests.get(self.mylist[2]).content)
@@ -150,7 +151,7 @@ class Window(QMainWindow):
         self.downMv3.clicked.connect(lambda: self._dv(self.id[2]))
         self.p3.clicked.connect(lambda: self._pl(self.id[2]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image4 = QImage()
         self.image4.loadFromData(requests.get(self.mylist[3]).content)
@@ -167,7 +168,7 @@ class Window(QMainWindow):
         self.downMv1.clicked.connect(lambda: self._dv(self.id[3]))
         self.p4.clicked.connect(lambda: self._pl(self.id[3]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image5 = QImage()
         self.image5.loadFromData(requests.get(self.mylist[4]).content)
@@ -184,7 +185,7 @@ class Window(QMainWindow):
         self.downMv5.clicked.connect(lambda: self._dv(self.id[4]))
         self.p5.clicked.connect(lambda: self._pl(self.id[4]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.image6 = QImage()
         self.image6.loadFromData(requests.get(self.mylist[5]).content)
@@ -201,7 +202,7 @@ class Window(QMainWindow):
         self.downMv6.clicked.connect(lambda: self._dv(self.id[5]))
         self.p6.clicked.connect(lambda: self._pl(self.id[5]))
 
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
 
         self.video.addWidget(self.imgL1, 0, 0)
         self.video.addWidget(self.downMp1, 1, 0)
@@ -212,6 +213,8 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMv4, 6, 0)
         self.video.addWidget(self.p4, 7, 0)
 
+        # ---------------------------------------------------------------------
+
         self.video.addWidget(self.imgL2, 0, 1)
         self.video.addWidget(self.downMp2, 1, 1)
         self.video.addWidget(self.downMv2, 2, 1)
@@ -220,6 +223,8 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMp5, 5, 1)
         self.video.addWidget(self.downMv5, 6, 1)
         self.video.addWidget(self.p5, 7, 1)
+
+        # ---------------------------------------------------------------------
 
         self.video.addWidget(self.imgL3, 0, 2)
         self.video.addWidget(self.downMp3, 1, 2)
@@ -230,21 +235,38 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMv6, 6, 2)
         self.video.addWidget(self.p6, 7, 2)
 
+        # ---------------------------------------------------------------------
+
+        # <==> TESTED <===========================================> TESTED <==>
+
     def _do(self, id):
-        os.system("youtube-dl -x --audio-format=mp3"
-                  + " -o '" + self.downloads_path + "/%(title)s.%(ext)s' '"
-                  + id + "'")
+        ydl_opts = {'outtmpl': self.downloads_path + '/%(title)s.%(ext)s',
+                    'audio-format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                        }], }
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([id])
+
+        # <==> TESTED <===========================================> TESTED <==>
 
     def _dv(self, id):
-        os.system("youtube-dl -f mp4"
-                  + " -o '" + self.downloads_path + "/%(title)s.%(ext)s' '"
-                  + id + "'")
+        ydl_opts = {'outtmpl': self.downloads_path + '/%(title)s.%(ext)s',
+                    'format': 'best'}
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([id])
 
-    def _pl(self, url):
+        # <==> TESTED <===========================================> TESTED <==>
+
+        # ---------------------------------------------------------------------
+
+    def _pl(self, id):
         if self.curr_play == 1:
             self.stop()
         self.curr_play = 1
-        video = pafy.new("https://www.youtube.com/watch?v=" + url)
+        video = pafy.new("https://www.youtube.com/watch?v=" + id)
         best = video.getbest()
         playurl = best.url
         Media = self.Instance.media_new(playurl)
@@ -255,26 +277,38 @@ class Window(QMainWindow):
         self.butt2.clicked.connect(lambda: self.stop())
         self.slider.valueChanged.connect(self._volume)
 
+        # ---------------------------------------------------------------------
+
     def pause(self):
         self.player.pause()
+
+        # ---------------------------------------------------------------------
 
     def stop(self):
         self.player.stop()
         self.curr_play = 0
 
+        # ---------------------------------------------------------------------
+
     def _volume(self):
         self.player.audio_set_volume(self.slider.value())
         self.volVal.display(self.slider.value())
+
+        # ---------------------------------------------------------------------
 
     def _createMenu(self):
         self.menu = self.menuBar().addMenu("&Menu")
         self.menu.addAction('&Exit', self.close)
 
+        # ---------------------------------------------------------------------
+
     def _createStatusBar(self):
         status = QStatusBar()
-        status.showMessage("Version: " + __version__
-                           + ", Author: " + __author__)
+        status.showMessage("Wersja: " + __version__
+                           + ", Autor: " + __author__)
         self.setStatusBar(status)
+
+        # ---------------------------------------------------------------------
 
 
 if __name__ == "__main__":
