@@ -20,8 +20,17 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              )
 
 
-__version__ = "v0.1.6"
+__version__ = "v0.1.7"
 __author__ = "Sebastian Kolanowski"
+
+platform = platform.system()
+downloads_path = str(Path.home() / "Downloads")
+if platform == "Windows":
+    downloads_path += "\\"
+else:
+    downloads_path += "/"
+Instance = vlc.Instance('--no-video')
+player = Instance.media_player_new()
 
 
 class Window(QMainWindow):
@@ -35,14 +44,6 @@ class Window(QMainWindow):
         self._centralWidget = QWidget(self)
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
-        self.platform = platform.system()
-        self.downloads_path = str(Path.home() / "Downloads")
-        if self.platform == "Windows":
-            self.downloads_path += "\\"
-        else:
-            self.downloads_path += "/"
-        self.Instance = vlc.Instance('--no-video')
-        self.player = self.Instance.media_player_new()
 
         self._createMenu()
         self._createDisplay()
@@ -96,11 +97,11 @@ class Window(QMainWindow):
         self.main.addLayout(self.controls)
         self.generalLayout.addLayout(self.main)
 
-        self.curr_play = 0
-
         # ---------------------------------------------------------------------
 
     def _getVideo(self):
+        if self.text.text() == '':
+            self.text.setText("Epic Sax Guy")
         for i in reversed(range(self.video.count())):
             self.video.itemAt(i).widget().setParent(None)
 
@@ -255,7 +256,7 @@ class Window(QMainWindow):
         # <===> TESTED <=========================================> TESTED <===>
 
     def _do(self, id):
-        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': downloads_path + '%(title)s.%(ext)s',
                     'audio-format': 'bestaudio',
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
@@ -268,7 +269,7 @@ class Window(QMainWindow):
         # <===> TESTED <=========================================> TESTED <===>
 
     def _dv(self, id):
-        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': downloads_path + '%(title)s.%(ext)s',
                     'format': 'best'}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([id])
@@ -278,17 +279,16 @@ class Window(QMainWindow):
         # ---------------------------------------------------------------------
 
     def _pl(self, id, title):
-        if self.curr_play == 1:
+        if player.is_playing():
             self.stop()
-        self.curr_play = 1
         self.played.setText("Teraz odtwarzane: " + title)
         video = pafy.new("https://www.youtube.com/watch?v=" + id)
         best = video.getbest()
         playurl = best.url
-        Media = self.Instance.media_new(playurl)
+        Media = Instance.media_new(playurl)
         Media.get_mrl()
-        self.player.set_media(Media)
-        self.player.play()
+        player.set_media(Media)
+        player.play()
         self.butt1.clicked.connect(lambda: self.pause())
         self.butt2.clicked.connect(lambda: self.stop())
         self.slider.valueChanged.connect(self._volume)
@@ -297,24 +297,23 @@ class Window(QMainWindow):
         # ---------------------------------------------------------------------
 
     def pause(self):
-        self.player.pause()
+        player.pause()
 
         # ---------------------------------------------------------------------
 
     def progress(self):
-        self.player.set_position(self.proBar.value()/100)
+        player.set_position(self.proBar.value()/100)
 
         # ---------------------------------------------------------------------
 
     def stop(self):
-        self.player.stop()
+        player.stop()
         self.played.setText("Nic nie jest odtwarzane...")
-        self.curr_play = 0
 
         # ---------------------------------------------------------------------
 
     def _volume(self):
-        self.player.audio_set_volume(self.slider.value())
+        player.audio_set_volume(self.slider.value())
         self.volVal.display(self.slider.value())
 
         # ---------------------------------------------------------------------
