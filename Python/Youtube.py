@@ -12,16 +12,17 @@ import platform
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QImage, QPixmap
+from PyQt5.QtCore import (Qt, QTimer)
+from PyQt5.QtGui import (QFont, QImage, QPixmap)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout, QLCDNumber,
+                             QProgressBar
                              )
 
 
-__version__ = "v0.1.7"
-__author__ = "Sebastian Kolanowski"
+__version__ = 'v0.1.8 - "Music Progress"'
+__author__ = 'Sebastian Kolanowski'
 
 platform = platform.system()
 downloads_path = str(Path.home() / "Downloads")
@@ -36,29 +37,29 @@ player = Instance.media_player_new()
 class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.Title = "Youtube music/video downloader."
+        Title = "Youtube music/video downloader."
         self.setFont(QFont('PatrickHand', 12))
-        self.setWindowTitle(self.Title)
+        self.setWindowTitle(Title)
         self.resize(630, 1)
         self.generalLayout = QHBoxLayout()
-        self._centralWidget = QWidget(self)
-        self._centralWidget.setLayout(self.generalLayout)
-        self.setCentralWidget(self._centralWidget)
+        _centralWidget = QWidget(self)
+        _centralWidget.setLayout(self.generalLayout)
+        self.setCentralWidget(_centralWidget)
 
         self._createMenu()
         self._createDisplay()
         self._createStatusBar()
 
     def _createDisplay(self):
-        self.main = QVBoxLayout()
+        main = QVBoxLayout()
         self.video = QGridLayout()
-        self.search = QHBoxLayout()
-        self.controls = QHBoxLayout()
+        search = QHBoxLayout()
+        controls = QHBoxLayout()
 
         self.butt1 = QPushButton("Pauza/Wznów")
         self.butt2 = QPushButton("Zatrzymaj")
-        self.volText = QLabel("Volume: ")
-        self.volText.setFixedWidth(50)
+        volText = QLabel("Volume: ")
+        volText.setFixedWidth(50)
         self.volVal = QLCDNumber()
         self.volVal.display(100)
         self.volVal.setFixedWidth(70)
@@ -66,21 +67,21 @@ class Window(QMainWindow):
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setValue(100)
         self.slider.setFixedWidth(150)
-        self.controls.addWidget(self.butt1)
-        self.controls.addWidget(self.butt2)
-        self.controls.addWidget(self.volText)
-        self.controls.addWidget(self.slider)
-        self.controls.addWidget(self.volVal)
+        controls.addWidget(self.butt1)
+        controls.addWidget(self.butt2)
+        controls.addWidget(volText)
+        controls.addWidget(self.slider)
+        controls.addWidget(self.volVal)
 
         self.text = QLineEdit()
         self.text.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
         self.button = QPushButton("Szukaj")
         self.button.clicked.connect(self._getVideo)
-        self.search.addWidget(self.text)
-        self.search.addWidget(self.button)
+        search.addWidget(self.text)
+        search.addWidget(self.button)
 
-        self.main.addLayout(self.search)
-        self.main.addLayout(self.video)
+        main.addLayout(search)
+        main.addLayout(self.video)
 
         self.played = QLabel()
         self.played.setText("Nic nie jest odtwarzane...")
@@ -89,13 +90,23 @@ class Window(QMainWindow):
         self.kon = QLabel("Kontrolki do odtwarzacza")
         self.kon.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.proBar = QSlider(Qt.Horizontal)
+        musicProgress = QHBoxLayout()
+        self.musicBar = QProgressBar()
+        self.s1up = QPushButton("+5%")
+        self.s1do = QPushButton("-5%")
+        self.s2up = QPushButton("+10%")
+        self.s2do = QPushButton("-10%")
+        musicProgress.addWidget(self.s2do)
+        musicProgress.addWidget(self.s1do)
+        musicProgress.addWidget(self.musicBar)
+        musicProgress.addWidget(self.s1up)
+        musicProgress.addWidget(self.s2up)
 
-        self.main.addWidget(self.played)
-        self.main.addWidget(self.kon)
-        self.main.addWidget(self.proBar)
-        self.main.addLayout(self.controls)
-        self.generalLayout.addLayout(self.main)
+        main.addWidget(self.played)
+        main.addWidget(self.kon)
+        main.addLayout(musicProgress)
+        main.addLayout(controls)
+        self.generalLayout.addLayout(main)
 
         # ---------------------------------------------------------------------
 
@@ -292,7 +303,15 @@ class Window(QMainWindow):
         self.butt1.clicked.connect(lambda: self.pause())
         self.butt2.clicked.connect(lambda: self.stop())
         self.slider.valueChanged.connect(self._volume)
-        self.proBar.valueChanged.connect(self.progress)
+        self.s1up.clicked.connect(lambda: self._progress(5))
+        self.s1do.clicked.connect(lambda: self._progress(-5))
+        self.s2up.clicked.connect(lambda: self._progress(10))
+        self.s2do.clicked.connect(lambda: self._progress(-10))
+        self.musicBar.setValue(0)
+        self.musicBar.setMaximum(100)
+        timer = QTimer(self)
+        timer.timeout.connect(self.music)
+        timer.start(1000)
 
         # ---------------------------------------------------------------------
 
@@ -301,8 +320,13 @@ class Window(QMainWindow):
 
         # ---------------------------------------------------------------------
 
-    def progress(self):
-        player.set_position(self.proBar.value()/100)
+    def _progress(self, val):
+        player.set_position(player.get_position() + (val/100))
+
+        # ---------------------------------------------------------------------
+
+    def music(self):
+        self.musicBar.setValue(int(player.get_position()*100))
 
         # ---------------------------------------------------------------------
 
