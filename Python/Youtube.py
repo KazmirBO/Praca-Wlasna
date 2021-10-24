@@ -17,11 +17,11 @@ from PyQt5.QtGui import (QFont, QImage, QPixmap)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout, QLCDNumber,
-                             QProgressBar
+                             QProgressBar, QCheckBox
                              )
 
 
-__version__ = 'v0.1.10 - "PAGES!!!"'
+__version__ = 'v0.1.11 - "Repeat"'
 __author__ = 'Sebastian Kolanowski'
 
 platform = platform.system()
@@ -41,8 +41,8 @@ class Window(QMainWindow):
         self.timer = QTimer(self)
         self.setFont(QFont('PatrickHand', 12))
         self.setWindowTitle(Title)
-        self.setFixedWidth(630)
-        self.setFixedHeight(780)
+        self.setFixedWidth(650)
+        self.setFixedHeight(100)
         self.generalLayout = QHBoxLayout()
         _centralWidget = QWidget(self)
         _centralWidget.setLayout(self.generalLayout)
@@ -68,12 +68,14 @@ class Window(QMainWindow):
         self.volVal.display(100)
         self.volVal.setFixedWidth(70)
         self.volVal.setFixedHeight(30)
+        self.repeat = QCheckBox("Powtarzaj")
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setValue(100)
         self.slider.setMaximum(100)
         self.slider.setFixedWidth(150)
         self.controls.addWidget(self.butt1)
         self.controls.addWidget(self.butt2)
+        self.controls.addWidget(self.repeat)
         self.controls.addWidget(self.volText)
         self.controls.addWidget(self.slider)
         self.controls.addWidget(self.volVal)
@@ -86,7 +88,6 @@ class Window(QMainWindow):
         self.search.addWidget(self.button)
 
         self.main.addLayout(self.search)
-        self.main.addLayout(self.video)
 
         self.page = QHBoxLayout()
         self.strona = QLabel()
@@ -125,25 +126,9 @@ class Window(QMainWindow):
         self.musicProgress.addWidget(self.s1up)
         self.musicProgress.addWidget(self.s2up)
 
-        self.main.addLayout(self.page)
-        self.main.addWidget(self.played)
-        self.main.addWidget(self.kon)
-        self.main.addLayout(self.musicProgress)
-        self.main.addLayout(self.controls)
         self.generalLayout.addLayout(self.main)
 
-        self.butt1.clicked.connect(lambda: self.pause())
-        self.butt2.clicked.connect(lambda: self.stop())
-        self.slider.valueChanged.connect(self._volume)
-        self.s1up.clicked.connect(lambda: self._progress(5))
-        self.s1do.clicked.connect(lambda: self._progress(-5))
-        self.s2up.clicked.connect(lambda: self._progress(10))
-        self.s2do.clicked.connect(lambda: self._progress(-10))
-
-        self.timer.timeout.connect(self.music)
-        self.timer.start(1000)
-
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _getVideo(self):
         if self.text.text() == '':
@@ -167,7 +152,7 @@ class Window(QMainWindow):
         if len(self.results) >= 6:
             self._showVideo()
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _increase(self):
         if self.i < int(len(self.results)/6)-1 and self.showed == 1:
@@ -181,13 +166,32 @@ class Window(QMainWindow):
             self.strona.setText(str(self.i+1))
             self._showVideo()
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _showVideo(self):
+        if self.showed == 0:
+            self.setFixedHeight(800)
+            self.main.addLayout(self.video)
+            self.main.addLayout(self.page)
+            self.main.addWidget(self.played)
+            self.main.addWidget(self.kon)
+            self.main.addLayout(self.musicProgress)
+            self.main.addLayout(self.controls)
+
+            self.butt1.clicked.connect(lambda: self.pause())
+            self.butt2.clicked.connect(lambda: self.stop())
+            self.slider.valueChanged.connect(self._volume)
+            self.s1up.clicked.connect(lambda: self._progress(5))
+            self.s1do.clicked.connect(lambda: self._progress(-5))
+            self.s2up.clicked.connect(lambda: self._progress(10))
+            self.s2do.clicked.connect(lambda: self._progress(-10))
+
+            self.timer.timeout.connect(self._music)
+            self.timer.start(100)
         self.showed = 1
         self.image1 = QImage()
         self.image1.loadFromData(requests.get(
-            self.mylist[(self.i*6)]).content)
+            self.mylist[(self.i*6)+0]).content)
         self.imgL1 = QLabel()
         self.zdj1 = QPixmap(self.image1)
         self.imgL1.setPixmap(self.zdj1.scaled(200, 100))
@@ -197,12 +201,12 @@ class Window(QMainWindow):
         self.downMv1.setFixedWidth(200)
         self.p1 = QPushButton("Odtwórz")
         self.p1.setFixedWidth(200)
-        self.downMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)]))
-        self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)]))
+        self.downMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
+        self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
         self.p1.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)], self.title[(self.i*6)]))
+            lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.image2 = QImage()
         self.image2.loadFromData(requests.get(
@@ -221,7 +225,7 @@ class Window(QMainWindow):
         self.p2.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.image3 = QImage()
         self.image3.loadFromData(requests.get(
@@ -240,7 +244,7 @@ class Window(QMainWindow):
         self.p3.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.image4 = QImage()
         self.image4.loadFromData(requests.get(
@@ -259,7 +263,7 @@ class Window(QMainWindow):
         self.p4.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.image5 = QImage()
         self.image5.loadFromData(requests.get(
@@ -278,7 +282,7 @@ class Window(QMainWindow):
         self.p5.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.image6 = QImage()
         self.image6.loadFromData(requests.get(
@@ -297,7 +301,7 @@ class Window(QMainWindow):
         self.p6.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5]))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.video.addWidget(self.imgL1, 0, 0)
         self.video.addWidget(self.downMp1, 1, 0)
@@ -308,7 +312,7 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMv4, 6, 0)
         self.video.addWidget(self.p4, 7, 0)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.video.addWidget(self.imgL2, 0, 1)
         self.video.addWidget(self.downMp2, 1, 1)
@@ -319,7 +323,7 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMv5, 6, 1)
         self.video.addWidget(self.p5, 7, 1)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
         self.video.addWidget(self.imgL3, 0, 2)
         self.video.addWidget(self.downMp3, 1, 2)
@@ -330,7 +334,7 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMv6, 6, 2)
         self.video.addWidget(self.p6, 7, 2)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
 # <===> TESTED <=================================================> TESTED <===>
 
@@ -347,7 +351,7 @@ class Window(QMainWindow):
 
 # <===> TESTED <=================================================> TESTED <===>
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
 # <===> TESTED <=================================================> TESTED <===>
 
@@ -359,7 +363,7 @@ class Window(QMainWindow):
 
 # <===> TESTED <=================================================> TESTED <===>
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _pl(self, id, title):
         if player.is_playing():
@@ -374,41 +378,44 @@ class Window(QMainWindow):
         player.play()
         self.musicBar.setValue(0)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def pause(self):
         player.pause()
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _progress(self, val):
         player.set_position(player.get_position() + (val/100))
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
-    def music(self):
+    def _music(self):
         self.musicBar.setValue(int(player.get_position()*100))
+        if self.repeat.checkState() != 0:
+            if player.get_position()*100 >= 99:
+                player.set_position(0)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def stop(self):
         player.stop()
         self.played.setText("Nic nie jest odtwarzane...")
         self.musicBar.setValue(0)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _volume(self):
         player.audio_set_volume(self.slider.value())
         self.volVal.display(self.slider.value())
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _createMenu(self):
         self.menu = self.menuBar().addMenu("&Menu")
         self.menu.addAction('&Exit', self.close)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
     def _createStatusBar(self):
         status = QStatusBar()
@@ -416,7 +423,7 @@ class Window(QMainWindow):
                            + ", Autor: " + __author__)
         self.setStatusBar(status)
 
-# -----------------------------------------------------------------------------
+# <--------------------------------------------------------------------------->
 
 
 if __name__ == "__main__":
