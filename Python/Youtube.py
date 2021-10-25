@@ -21,17 +21,8 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              )
 
 
-__version__ = 'v0.1.13a - "Queue!!!"'
+__version__ = 'v0.1.13b - "Queue!!!"'
 __author__ = 'Sebastian Kolanowski'
-
-platform = platform.system()
-downloads_path = str(Path.home() / "Downloads")
-if platform == "Windows":
-    downloads_path += "\\"
-else:
-    downloads_path += "/"
-Instance = vlc.Instance('--no-video')
-player = Instance.media_player_new()
 
 
 class Window(QMainWindow):
@@ -51,6 +42,14 @@ class Window(QMainWindow):
         self.queue = []
         self.ifSkip = 0
         self.i = 0
+        self.platform = platform.system()
+        self.downloads_path = str(Path.home() / "Downloads")
+        if self.platform == "Windows":
+            self.downloads_path += "\\"
+        else:
+            self.downloads_path += "/"
+        self.Instance = vlc.Instance('--no-video')
+        self.player = self.Instance.media_player_new()
 
         self._createMenu()
         self._createUi()
@@ -364,7 +363,7 @@ class Window(QMainWindow):
 # <===> TESTED <=================================================> TESTED <===>
 
     def _do(self, id):
-        ydl_opts = {'outtmpl': downloads_path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
                     'audio-format': 'bestaudio',
                     'postprocessors': [{
                         'key': 'FFmpegExtractAudio',
@@ -381,7 +380,7 @@ class Window(QMainWindow):
 # <===> TESTED <=================================================> TESTED <===>
 
     def _dv(self, id):
-        ydl_opts = {'outtmpl': downloads_path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': self.downloads_path + '%(title)s.%(ext)s',
                     'format': 'best'}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([id])
@@ -391,7 +390,7 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _pl(self, id, title):
-        if player.is_playing() and self.ifSkip == 0:
+        if self.player.is_playing() and self.ifSkip == 0:
             self.queue.append(id)
             self.queue.append(title)
             self.queueLen.setText("W kolejce: " + str(int(len(self.queue)/2)))
@@ -400,34 +399,32 @@ class Window(QMainWindow):
             video = pafy.new("https://www.youtube.com/watch?v=" + id)
             best = video.getbest()
             playurl = best.url
-            Media = Instance.media_new(playurl)
+            Media = self.Instance.media_new(playurl)
             Media.get_mrl()
-            player.set_media(Media)
-            player.play()
+            self.player.set_media(Media)
+            self.player.play()
             self.musicBar.setValue(0)
 
 # <--------------------------------------------------------------------------->
 
     def pause(self):
-        player.pause()
+        self.player.pause()
 
 # <--------------------------------------------------------------------------->
 
     def _progress(self, val):
-        player.set_position(player.get_position() + (val/100))
+        self.player.set_position(self.player.get_position() + (val/100))
 
 # <--------------------------------------------------------------------------->
 
     def _music(self):
-        print(self.queue)
-        print(len(self.queue))
-        self.musicBar.setValue(int(player.get_position()*100))
+        self.musicBar.setValue(int(self.player.get_position()*100))
         if self.repeat.checkState() != 0:
-            if player.get_position()*100 >= 99:
-                player.set_position(0)
+            if self.player.get_position()*100 >= 99:
+                self.player.set_position(0)
         else:
-            if player.is_playing() == 0:
-                if len(self.queue) > 0 and player.get_position()*100 > 90:
+            if self.player.is_playing() == 0:
+                if len(self.queue) > 0 and self.player.get_position()*100 > 90:
                     self._pl(self.queue.pop(0), self.queue.pop(0))
                     if len(self.queue) <= 0:
                         self.queueLen.setText("Kolejka jest pusta...")
@@ -435,7 +432,7 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def stop(self):
-        player.stop()
+        self.player.stop()
         self.played.setText("Nic nie jest odtwarzane...")
         self.musicBar.setValue(0)
 
@@ -455,7 +452,7 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _volume(self):
-        player.audio_set_volume(self.slider.value())
+        self.player.audio_set_volume(self.slider.value())
         self.volVal.display(self.slider.value())
 
 # <--------------------------------------------------------------------------->
