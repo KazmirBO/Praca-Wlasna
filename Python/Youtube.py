@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              )
 
 
-__version__ = 'v0.1.12 - "Code Optimization"'
+__version__ = 'v0.1.12a - "Code Optimization"'
 __author__ = 'Sebastian Kolanowski'
 
 platform = platform.system()
@@ -46,6 +46,9 @@ class Window(QMainWindow):
         _centralWidget = QWidget(self)
         _centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(_centralWidget)
+        self.timer = QTimer(self)
+        self.showed = 0
+        self.i = 0
 
         self._createMenu()
         self._createUi()
@@ -209,12 +212,6 @@ class Window(QMainWindow):
         self.video.addWidget(self.downMp6, 5, 2)
         self.video.addWidget(self.downMv6, 6, 2)
         self.video.addWidget(self.p6, 7, 2)
-
-# <--------------------------------------------------------------------------->
-
-        self.timer = QTimer(self)
-        self.showed = 0
-        self.i = 0
 
 # <--------------------------------------------------------------------------->
 
