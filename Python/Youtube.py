@@ -9,7 +9,6 @@ import vlc
 import pafy
 import youtube_dl
 import platform
-import time
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
@@ -22,7 +21,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              )
 
 
-__version__ = 'v0.1.13 - "Queue!!!"'
+__version__ = 'v0.1.13a - "Queue!!!"'
 __author__ = 'Sebastian Kolanowski'
 
 platform = platform.system()
@@ -105,6 +104,10 @@ class Window(QMainWindow):
         self.played = QLabel()
         self.played.setText("Nic nie jest odtwarzane...")
         self.played.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.queueLen = QLabel()
+        self.queueLen.setText("Kolejka jest pusta...")
+        self.queueLen.setAlignment(QtCore.Qt.AlignCenter)
 
         self.kon = QLabel("Kontrolki do odtwarzacza")
         self.kon.setAlignment(QtCore.Qt.AlignCenter)
@@ -295,6 +298,7 @@ class Window(QMainWindow):
             self.main.addLayout(self.video)
             self.main.addLayout(self.page)
             self.main.addWidget(self.played)
+            self.main.addWidget(self.queueLen)
             self.main.addWidget(self.kon)
             self.main.addLayout(self.musicProgress)
             self.main.addLayout(self.controls)
@@ -390,6 +394,7 @@ class Window(QMainWindow):
         if player.is_playing() and self.ifSkip == 0:
             self.queue.append(id)
             self.queue.append(title)
+            self.queueLen.setText("W kolejce: " + str(int(len(self.queue)/2)))
         else:
             self.played.setText("Teraz odtwarzane: " + title)
             video = pafy.new("https://www.youtube.com/watch?v=" + id)
@@ -424,6 +429,8 @@ class Window(QMainWindow):
             if player.is_playing() == 0:
                 if len(self.queue) > 0 and player.get_position()*100 > 90:
                     self._pl(self.queue.pop(0), self.queue.pop(0))
+                    if len(self.queue) <= 0:
+                        self.queueLen.setText("Kolejka jest pusta...")
 
 # <--------------------------------------------------------------------------->
 
@@ -439,6 +446,11 @@ class Window(QMainWindow):
             self.ifSkip = 1
             self._pl(self.queue.pop(0), self.queue.pop(0))
             self.ifSkip = 0
+            if len(self.queue) <= 0:
+                self.queueLen.setText("Kolejka jest pusta...")
+            else:
+                self.queueLen.setText("W kolejce: "
+                                      + str(int(len(self.queue)/2)))
 
 # <--------------------------------------------------------------------------->
 
