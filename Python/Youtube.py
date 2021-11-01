@@ -9,6 +9,7 @@ import vlc
 import pafy
 import youtube_dl
 import platform
+import time
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
@@ -16,19 +17,20 @@ from PyQt5.QtCore import (Qt, QTimer)
 from PyQt5.QtGui import (QFont, QImage, QPixmap)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
-                             QStatusBar, QApplication, QGridLayout, QLCDNumber,
-                             QProgressBar, QCheckBox
+                             QStatusBar, QApplication, QGridLayout, QCheckBox,
                              )
 
 
-__version__ = 'v0.1.13b - "Queue!!!"'
+__version__ = 'v0.1.14 - "Timestamp"'
 __author__ = 'Sebastian Kolanowski'
 
 
 class Window(QMainWindow):
+    """Main Window."""
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        Title = "Youtube music/video downloader."
+        Title = "Youtube App"
         self.setFont(QFont('PatrickHand', 12))
         self.setWindowTitle(Title)
         self.setFixedWidth(650)
@@ -39,15 +41,18 @@ class Window(QMainWindow):
         self.setCentralWidget(_centralWidget)
         self.timer = QTimer(self)
         self.showed = 0
+        self.duration = 0
         self.queue = []
         self.ifSkip = 0
         self.i = 0
+        # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
         self.platform = platform.system()
         self.downloads_path = str(Path.home() / "Downloads")
         if self.platform == "Windows":
             self.downloads_path += "\\"
         else:
             self.downloads_path += "/"
+        # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
         self.Instance = vlc.Instance('--no-video')
         self.player = self.Instance.media_player_new()
 
@@ -58,20 +63,19 @@ class Window(QMainWindow):
     def _createUi(self):
         self.main = QVBoxLayout()
 
-        self.controls = QHBoxLayout()
         self.butt1 = QPushButton("Pauza/Wznów")
         self.butt2 = QPushButton("Zatrzymaj")
         self.volText = QLabel("Volume: ")
         self.volText.setFixedWidth(50)
-        self.volVal = QLCDNumber()
-        self.volVal.display(100)
-        self.volVal.setFixedWidth(70)
-        self.volVal.setFixedHeight(30)
+        self.volVal = QLabel()
+        self.volVal.setText("100")
+        self.volVal.setFixedWidth(30)
         self.repeat = QCheckBox("Powtarzaj")
         self.slider = QSlider(Qt.Horizontal)
         self.slider.setValue(100)
         self.slider.setMaximum(100)
         self.slider.setFixedWidth(150)
+        self.controls = QHBoxLayout()
         self.controls.addWidget(self.butt1)
         self.controls.addWidget(self.butt2)
         self.controls.addWidget(self.repeat)
@@ -79,16 +83,15 @@ class Window(QMainWindow):
         self.controls.addWidget(self.slider)
         self.controls.addWidget(self.volVal)
 
-        self.search = QHBoxLayout()
         self.text = QLineEdit()
         self.text.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
         self.button = QPushButton("Szukaj")
         self.button.clicked.connect(self._getVideo)
+        self.search = QHBoxLayout()
         self.search.addWidget(self.text)
         self.search.addWidget(self.button)
         self.main.addLayout(self.search)
 
-        self.page = QHBoxLayout()
         self.strona = QLabel()
         self.strona.setText(str(self.i+1))
         self.strona.setAlignment(QtCore.Qt.AlignCenter)
@@ -96,6 +99,7 @@ class Window(QMainWindow):
         self.right = QPushButton("Następna")
         self.right.clicked.connect(self._increase)
         self.left.clicked.connect(self._decrease)
+        self.page = QHBoxLayout()
         self.page.addWidget(self.left)
         self.page.addWidget(self.strona)
         self.page.addWidget(self.right)
@@ -112,24 +116,16 @@ class Window(QMainWindow):
         self.kon.setAlignment(QtCore.Qt.AlignCenter)
 
         self.musicProgress = QHBoxLayout()
-        self.musicBar = QProgressBar()
-        self.s1up = QPushButton("+5%")
-        self.s1up.setFixedWidth(75)
-        self.s1do = QPushButton("-5%")
-        self.s1do.setFixedWidth(75)
-        self.s2up = QPushButton("+10%")
-        self.s2up.setFixedWidth(75)
-        self.s2do = QPushButton("-10%")
-        self.s2do.setFixedWidth(75)
         self.skip = QPushButton("Skip")
         self.skip.setFixedWidth(75)
-        self.musicProgress.addWidget(self.s2do)
-        self.musicProgress.addWidget(self.s1do)
-        self.musicProgress.addWidget(self.musicBar)
-        self.musicBar.setMaximum(100)
+        self.progVal = QLabel("0/0")
+        self.progVal.setFixedWidth(90)
+        self.musicBar = QSlider(Qt.Horizontal)
+        self.musicBar.setMaximum(1000)
         self.musicBar.setValue(0)
-        self.musicProgress.addWidget(self.s1up)
-        self.musicProgress.addWidget(self.s2up)
+        self.musicBar.sliderMoved.connect(self._progress)
+        self.musicProgress.addWidget(self.musicBar)
+        self.musicProgress.addWidget(self.progVal)
         self.musicProgress.addWidget(self.skip)
 
         self.generalLayout.addLayout(self.main)
@@ -195,32 +191,38 @@ class Window(QMainWindow):
         self.downMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
         self.p1.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0]))
+            lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0],
+                             self.time[(self.i*6)+0]))
 
         self.downMp2.clicked.connect(lambda: self._do(self.id[(self.i*6)+1]))
         self.downMv2.clicked.connect(lambda: self._dv(self.id[(self.i*6)+1]))
         self.p2.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1]))
+            lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1],
+                             self.time[(self.i*6)+1]))
 
         self.downMp3.clicked.connect(lambda: self._do(self.id[(self.i*6)+2]))
         self.downMv3.clicked.connect(lambda: self._dv(self.id[(self.i*6)+2]))
         self.p3.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2]))
+            lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2],
+                             self.time[(self.i*6)+2]))
 
         self.downMp4.clicked.connect(lambda: self._do(self.id[(self.i*6)+3]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+3]))
         self.p4.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3]))
+            lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3],
+                             self.time[(self.i*6)+3]))
 
         self.downMp5.clicked.connect(lambda: self._do(self.id[(self.i*6)+4]))
         self.downMv5.clicked.connect(lambda: self._dv(self.id[(self.i*6)+4]))
         self.p5.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4]))
+            lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4],
+                             self.time[(self.i*6)+4]))
 
         self.downMp6.clicked.connect(lambda: self._do(self.id[(self.i*6)+5]))
         self.downMv6.clicked.connect(lambda: self._dv(self.id[(self.i*6)+5]))
         self.p6.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5]))
+            lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5],
+                             self.time[(self.i*6)+5]))
 
 # <--------------------------------------------------------------------------->
 
@@ -260,6 +262,7 @@ class Window(QMainWindow):
             self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up")
 
         self.id = []
+        self.time = []
         self.mylist = []
         self.title = []
         self.results = YoutubeSearch("'" + self.text.text() + "'",
@@ -267,6 +270,7 @@ class Window(QMainWindow):
 
         for v in self.results:
             self.id.append(v['id'])
+            self.time.append(v['duration'])
             self.title.append(v['title'])
             self.mylist.append(v['thumbnails'][0])
 
@@ -302,13 +306,9 @@ class Window(QMainWindow):
             self.main.addLayout(self.musicProgress)
             self.main.addLayout(self.controls)
 
-            self.butt1.clicked.connect(lambda: self.pause())
-            self.butt2.clicked.connect(lambda: self.stop())
+            self.butt1.clicked.connect(lambda: self._pause())
+            self.butt2.clicked.connect(lambda: self._stop())
             self.slider.valueChanged.connect(self._volume)
-            self.s1up.clicked.connect(lambda: self._progress(5))
-            self.s1do.clicked.connect(lambda: self._progress(-5))
-            self.s2up.clicked.connect(lambda: self._progress(10))
-            self.s2do.clicked.connect(lambda: self._progress(-10))
             self.skip.clicked.connect(lambda: self._skip())
 
             self.timer.timeout.connect(self._music)
@@ -320,43 +320,43 @@ class Window(QMainWindow):
 
         self.image1.loadFromData(requests.get(
             self.mylist[(self.i*6)+0]).content)
-        self.zdj1 = QPixmap(self.image1)
-        self.imgL1.setPixmap(self.zdj1.scaled(200, 100))
+        zdj1 = QPixmap(self.image1)
+        self.imgL1.setPixmap(zdj1.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
         self.image2.loadFromData(requests.get(
             self.mylist[(self.i*6)+1]).content)
-        self.zdj2 = QPixmap(self.image2)
-        self.imgL2.setPixmap(self.zdj2.scaled(200, 100))
+        zdj2 = QPixmap(self.image2)
+        self.imgL2.setPixmap(zdj2.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
         self.image3.loadFromData(requests.get(
             self.mylist[(self.i*6)+2]).content)
-        self.zdj3 = QPixmap(self.image3)
-        self.imgL3.setPixmap(self.zdj3.scaled(200, 100))
+        zdj3 = QPixmap(self.image3)
+        self.imgL3.setPixmap(zdj3.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
         self.image4.loadFromData(requests.get(
             self.mylist[(self.i*6)+3]).content)
-        self.zdj4 = QPixmap(self.image4)
-        self.imgL4.setPixmap(self.zdj4.scaled(200, 100))
+        zdj4 = QPixmap(self.image4)
+        self.imgL4.setPixmap(zdj4.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
         self.image5.loadFromData(requests.get(
             self.mylist[(self.i*6)+4]).content)
-        self.zdj5 = QPixmap(self.image5)
-        self.imgL5.setPixmap(self.zdj5.scaled(200, 100))
+        zdj5 = QPixmap(self.image5)
+        self.imgL5.setPixmap(zdj5.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
         self.image6.loadFromData(requests.get(
             self.mylist[(self.i*6)+5]).content)
-        self.zdj6 = QPixmap(self.image6)
-        self.imgL6.setPixmap(self.zdj6.scaled(200, 100))
+        zdj6 = QPixmap(self.image6)
+        self.imgL6.setPixmap(zdj6.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
@@ -389,12 +389,14 @@ class Window(QMainWindow):
 
 # <--------------------------------------------------------------------------->
 
-    def _pl(self, id, title):
+    def _pl(self, id, title, time):
         if self.player.is_playing() and self.ifSkip == 0:
             self.queue.append(id)
             self.queue.append(title)
-            self.queueLen.setText("W kolejce: " + str(int(len(self.queue)/2)))
+            self.queue.append(time)
+            self.queueLen.setText("W kolejce: " + str(int(len(self.queue)/3)))
         else:
+            self.duration = time
             self.played.setText("Teraz odtwarzane: " + title)
             video = pafy.new("https://www.youtube.com/watch?v=" + id)
             best = video.getbest()
@@ -407,31 +409,35 @@ class Window(QMainWindow):
 
 # <--------------------------------------------------------------------------->
 
-    def pause(self):
+    def _pause(self):
         self.player.pause()
 
 # <--------------------------------------------------------------------------->
 
-    def _progress(self, val):
-        self.player.set_position(self.player.get_position() + (val/100))
+    def _progress(self):
+        self.player.set_position(self.musicBar.value()/1000)
 
 # <--------------------------------------------------------------------------->
 
     def _music(self):
-        self.musicBar.setValue(int(self.player.get_position()*100))
+        self.musicBar.setValue(int(self.player.get_position()*1000))
+        self.progVal.setText(
+            time.strftime('%M:%S', time.gmtime(self.player.get_time()/1000))
+            + "/" + str(self.duration))
         if self.repeat.checkState() != 0:
             if self.player.get_position()*100 >= 99:
                 self.player.set_position(0)
         else:
             if self.player.is_playing() == 0:
                 if len(self.queue) > 0 and self.player.get_position()*100 > 90:
-                    self._pl(self.queue.pop(0), self.queue.pop(0))
+                    self._pl(self.queue.pop(0), self.queue.pop(
+                        0), self.queue.pop(0))
                     if len(self.queue) <= 0:
                         self.queueLen.setText("Kolejka jest pusta...")
 
 # <--------------------------------------------------------------------------->
 
-    def stop(self):
+    def _stop(self):
         self.player.stop()
         self.played.setText("Nic nie jest odtwarzane...")
         self.musicBar.setValue(0)
@@ -441,25 +447,25 @@ class Window(QMainWindow):
     def _skip(self):
         if len(self.queue) > 0:
             self.ifSkip = 1
-            self._pl(self.queue.pop(0), self.queue.pop(0))
+            self._pl(self.queue.pop(0), self.queue.pop(0), self.queue.pop(0))
             self.ifSkip = 0
             if len(self.queue) <= 0:
                 self.queueLen.setText("Kolejka jest pusta...")
             else:
                 self.queueLen.setText("W kolejce: "
-                                      + str(int(len(self.queue)/2)))
+                                      + str(int(len(self.queue)/3)))
 
 # <--------------------------------------------------------------------------->
 
     def _volume(self):
         self.player.audio_set_volume(self.slider.value())
-        self.volVal.display(self.slider.value())
+        self.volVal.setText(str(self.slider.value()))
 
 # <--------------------------------------------------------------------------->
 
     def _createMenu(self):
-        self.menu = self.menuBar().addMenu("&Menu")
-        self.menu.addAction('&Exit', self.close)
+        menu = self.menuBar().addMenu("&Menu")
+        menu.addAction('&Exit', self.close)
 
 # <--------------------------------------------------------------------------->
 
