@@ -7,79 +7,36 @@ import sys
 import requests
 import vlc
 import pafy
-import youtube_dl
 import platform
 import time
 import webbrowser
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
-from PyQt5.QtCore import (Qt, QTimer, QThread)
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import (QFont, QImage, QPixmap)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
-                             QStatusBar, QApplication, QGridLayout, QCheckBox,
+                             QStatusBar, QApplication, QGridLayout, QCheckBox
                              )
 
+import Download as Dv
 
-__version__ = 'v0.2.1 - "New Interface + Code Optimize"'
+
+__version__ = 'v0.2.2 - "Download Fix"'
 __author__ = 'Sebastian Kolanowski'
 
 
-class _DownloadMP3(QThread):
-    notifyProgress = QtCore.pyqtSignal(int)
-
-    def __init__(self, id, path, parent=None):
-        QThread.__init__(self, parent)
-        self.id = id
-        self.path = path
-
-    def run(self):
-        ydl_opts = {'outtmpl': self.path + '%(title)s.%(ext)s',
-                    'audio-format': 'bestaudio',
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': '192',
-                        }], }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.id])
-
-
-class _DownloadMP4(QThread):
-    notifyProgress = QtCore.pyqtSignal(int)
-
-    def __init__(self, id, path, parent=None):
-        QThread.__init__(self, parent)
-        self.id = id
-        self.path = path
-
-    def run(self):
-        ydl_opts = {'outtmpl': self.path + '%(title)s.%(ext)s',
-                    'format': 'best'}
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.id])
-
-
 class Window(QMainWindow):
-    """Main Window."""
-
     def __init__(self, parent=None):
         super().__init__(parent)
-        Title = "Youtube App"
-        self.setWindowTitle(Title)
+        self.setWindowTitle("Youtube App")
         self.setFixedWidth(700)
         self.setFixedHeight(100)
         self.generalLayout = QHBoxLayout()
-        _centralWidget = QWidget(self)
-        _centralWidget.setLayout(self.generalLayout)
-        self.setCentralWidget(_centralWidget)
-        self.timer = QTimer(self)
-        self.i = 0
-        self.queue = []
-        self.ifSkip = 0
-        self.showed = 0
-        self.duration = 0
+        self._centralWidget = QWidget(self)
+        self._centralWidget.setLayout(self.generalLayout)
+        self.setCentralWidget(self._centralWidget)
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
         self.platform = platform.system()
         self.downloads_path = str(Path.home() / "Downloads")
@@ -90,6 +47,12 @@ class Window(QMainWindow):
             self.downloads_path += "/"
             self.setFont(QFont('PatrickHand', 12))
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
+        self.i = 0
+        self.queue = []
+        self.ifSkip = 0
+        self.showed = 0
+        self.duration = 0
+        self.timer = QTimer(self)
         self.Instance = vlc.Instance('--no-video')
         self.player = self.Instance.media_player_new()
 
@@ -175,7 +138,7 @@ class Window(QMainWindow):
         self.downMv1 = QPushButton("MP4 ⬇")
         self.p1 = QPushButton("PLY ▶️")
         self.p1.setFixedWidth(100)
-        self.yt1 = QPushButton("YT 🌍")
+        self.yt1 = QPushButton("YT")
         self.yt1.setFixedWidth(100)
 
         self.image2 = QImage()
@@ -184,7 +147,7 @@ class Window(QMainWindow):
         self.downMv2 = QPushButton("MP4 ⬇")
         self.p2 = QPushButton("PLY ▶️")
         self.p2.setFixedWidth(100)
-        self.yt2 = QPushButton("YT 🌍")
+        self.yt2 = QPushButton("YT")
         self.yt2.setFixedWidth(100)
 
         self.image3 = QImage()
@@ -193,7 +156,7 @@ class Window(QMainWindow):
         self.downMv3 = QPushButton("MP4 ⬇")
         self.p3 = QPushButton("PLY ▶️")
         self.p3.setFixedWidth(100)
-        self.yt3 = QPushButton("YT 🌍")
+        self.yt3 = QPushButton("YT")
         self.yt3.setFixedWidth(100)
 
         self.image4 = QImage()
@@ -202,7 +165,7 @@ class Window(QMainWindow):
         self.downMv4 = QPushButton("MP4 ⬇")
         self.p4 = QPushButton("PLY ▶️")
         self.p4.setFixedWidth(100)
-        self.yt4 = QPushButton("YT 🌍")
+        self.yt4 = QPushButton("YT")
         self.yt4.setFixedWidth(100)
 
         self.image5 = QImage()
@@ -211,7 +174,7 @@ class Window(QMainWindow):
         self.downMv5 = QPushButton("MP4 ⬇")
         self.p5 = QPushButton("PLY ▶️")
         self.p5.setFixedWidth(100)
-        self.yt5 = QPushButton("YT 🌍")
+        self.yt5 = QPushButton("YT")
         self.yt5.setFixedWidth(100)
 
         self.image6 = QImage()
@@ -220,48 +183,42 @@ class Window(QMainWindow):
         self.downMv6 = QPushButton("MP4 ⬇")
         self.p6 = QPushButton("PLY ▶️")
         self.p6.setFixedWidth(100)
-        self.yt6 = QPushButton("YT 🌍")
+        self.yt6 = QPushButton("YT")
         self.yt6.setFixedWidth(100)
 
 # <--------------------------------------------------------------------------->
 
-        self.downMp1.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+0], self.downMp1))
+        self.downMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
         self.p1.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0],
                              self.time[(self.i*6)+0]))
 
-        self.downMp2.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+1], self.downMp2))
+        self.downMp2.clicked.connect(lambda: self._do(self.id[(self.i*6)+1]))
         self.downMv2.clicked.connect(lambda: self._dv(self.id[(self.i*6)+1]))
         self.p2.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1],
                              self.time[(self.i*6)+1]))
 
-        self.downMp3.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+2], self.downMp3))
+        self.downMp3.clicked.connect(lambda: self._do(self.id[(self.i*6)+2]))
         self.downMv3.clicked.connect(lambda: self._dv(self.id[(self.i*6)+2]))
         self.p3.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2],
                              self.time[(self.i*6)+2]))
 
-        self.downMp4.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+3], self.downMp4))
+        self.downMp4.clicked.connect(lambda: self._do(self.id[(self.i*6)+3]))
         self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+3]))
         self.p4.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3],
                              self.time[(self.i*6)+3]))
 
-        self.downMp5.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+4], self.downMp5))
+        self.downMp5.clicked.connect(lambda: self._do(self.id[(self.i*6)+4]))
         self.downMv5.clicked.connect(lambda: self._dv(self.id[(self.i*6)+4]))
         self.p5.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4],
                              self.time[(self.i*6)+4]))
 
-        self.downMp6.clicked.connect(lambda: self._do(
-            self.id[(self.i*6)+5], self.downMp6))
+        self.downMp6.clicked.connect(lambda: self._do(self.id[(self.i*6)+5]))
         self.downMv6.clicked.connect(lambda: self._dv(self.id[(self.i*6)+5]))
         self.p6.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5],
@@ -338,7 +295,7 @@ class Window(QMainWindow):
 
     def _getVideo(self):
         if self.text.text() == '':
-            self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up")
+            self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
 
         self.id = []
         self.time = []
@@ -358,20 +315,6 @@ class Window(QMainWindow):
         self.i = 0
         self.strona.setText(str(self.i+1))
         if len(self.results) >= 6:
-            self._updateUi()
-
-# <--------------------------------------------------------------------------->
-
-    def _increase(self):
-        if self.i < int(len(self.results)/6)-1 and self.showed == 1:
-            self.i += 1
-            self.strona.setText(str(self.i+1))
-            self._updateUi()
-
-    def _decrease(self):
-        if self.i > 0 and self.showed == 1:
-            self.i -= 1
-            self.strona.setText(str(self.i+1))
             self._updateUi()
 
 # <--------------------------------------------------------------------------->
@@ -417,35 +360,25 @@ class Window(QMainWindow):
         zdj1 = QPixmap(self.image1)
         self.imgL1.setPixmap(zdj1.scaled(200, 100))
 
-# <--------------------------------------------------------------------------->
-
         self.image2.loadFromData(requests.get(
             self.mylist[(self.i*6)+1]).content)
         zdj2 = QPixmap(self.image2)
         self.imgL2.setPixmap(zdj2.scaled(200, 100))
-
-# <--------------------------------------------------------------------------->
 
         self.image3.loadFromData(requests.get(
             self.mylist[(self.i*6)+2]).content)
         zdj3 = QPixmap(self.image3)
         self.imgL3.setPixmap(zdj3.scaled(200, 100))
 
-# <--------------------------------------------------------------------------->
-
         self.image4.loadFromData(requests.get(
             self.mylist[(self.i*6)+3]).content)
         zdj4 = QPixmap(self.image4)
         self.imgL4.setPixmap(zdj4.scaled(200, 100))
 
-# <--------------------------------------------------------------------------->
-
         self.image5.loadFromData(requests.get(
             self.mylist[(self.i*6)+4]).content)
         zdj5 = QPixmap(self.image5)
         self.imgL5.setPixmap(zdj5.scaled(200, 100))
-
-# <--------------------------------------------------------------------------->
 
         self.image6.loadFromData(requests.get(
             self.mylist[(self.i*6)+5]).content)
@@ -469,23 +402,29 @@ class Window(QMainWindow):
 
 # <--------------------------------------------------------------------------->
 
-# <===> WORK IN PROGRESS <=============================> WORK IN PROGRESS <===>
-
-    def _do(self, id, button):
-        self.worker = _DownloadMP3(id, self.downloads_path)
+    def _do(self, id):
+        self.worker = Dv._DownloadMP3(id, self.downloads_path)
         self.worker.start()
+        self.worker.quit()
 
-# <===> WORK IN PROGRESS <=============================> WORK IN PROGRESS <===>
+    def _dv(self, id):
+        self.worker = Dv._DownloadMP4(id, self.downloads_path)
+        self.worker.start()
+        self.worker.quit()
 
 # <--------------------------------------------------------------------------->
 
-# <===> WORK IN PROGRESS <=============================> WORK IN PROGRESS <===>
+    def _increase(self):
+        if self.i < int(len(self.results)/6)-1:
+            self.i += 1
+            self.strona.setText(str(self.i+1))
+            self._updateUi()
 
-    def _dv(self, id):
-        self.worker = _DownloadMP4(id, self.downloads_path)
-        self.worker.start()
-
-# <===> WORK IN PROGRESS <=============================> WORK IN PROGRESS <===>
+    def _decrease(self):
+        if self.i > 0:
+            self.i -= 1
+            self.strona.setText(str(self.i+1))
+            self._updateUi()
 
 # <--------------------------------------------------------------------------->
 
@@ -512,12 +451,28 @@ class Window(QMainWindow):
     def _pause(self):
         self.player.pause()
 
-# <--------------------------------------------------------------------------->
+    def _stop(self):
+        self.player.stop()
+        self.played.setText("Nic nie jest odtwarzane...")
+        self.musicBar.setValue(0)
+
+    def _skip(self):
+        if len(self.queue) > 0:
+            self.ifSkip = 1
+            self._pl(self.queue.pop(0), self.queue.pop(0), self.queue.pop(0))
+            self.ifSkip = 0
+            if len(self.queue) <= 0:
+                self.queueLen.setText("Kolejka jest pusta...")
+            else:
+                self.queueLen.setText("W kolejce: "
+                                      + str(int(len(self.queue)/3)))
+
+    def _volume(self):
+        self.player.audio_set_volume(self.slider.value())
+        self.volVal.setText(str(self.slider.value()))
 
     def _progress(self):
         self.player.set_position(self.musicBar.value()/1000)
-
-# <--------------------------------------------------------------------------->
 
     def _music(self):
         self.musicBar.setValue(int(self.player.get_position()*1000))
@@ -537,37 +492,9 @@ class Window(QMainWindow):
 
 # <--------------------------------------------------------------------------->
 
-    def _stop(self):
-        self.player.stop()
-        self.played.setText("Nic nie jest odtwarzane...")
-        self.musicBar.setValue(0)
-
-# <--------------------------------------------------------------------------->
-
-    def _skip(self):
-        if len(self.queue) > 0:
-            self.ifSkip = 1
-            self._pl(self.queue.pop(0), self.queue.pop(0), self.queue.pop(0))
-            self.ifSkip = 0
-            if len(self.queue) <= 0:
-                self.queueLen.setText("Kolejka jest pusta...")
-            else:
-                self.queueLen.setText("W kolejce: "
-                                      + str(int(len(self.queue)/3)))
-
-# <--------------------------------------------------------------------------->
-
-    def _volume(self):
-        self.player.audio_set_volume(self.slider.value())
-        self.volVal.setText(str(self.slider.value()))
-
-# <--------------------------------------------------------------------------->
-
     def _createMenu(self):
         menu = self.menuBar().addMenu("&Menu")
         menu.addAction('&Exit', self.close)
-
-# <--------------------------------------------------------------------------->
 
     def _createStatusBar(self):
         status = QStatusBar()
