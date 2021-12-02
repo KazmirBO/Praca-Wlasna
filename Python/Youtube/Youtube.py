@@ -94,6 +94,10 @@ class Window(QMainWindow):
         self.stronaWysz.addWidget(self.stronaWynikow)
         self.stronaWysz.addWidget(self.stronaWPrawo)
 
+        self.progresPob = QLabel()
+        self.progresPob.setText("Nic nie jest pobierane...")
+        self.progresPob.setAlignment(QtCore.Qt.AlignCenter)
+
         self.terazOdt = QLabel()
         self.terazOdt.setText("Nic nie jest odtwarzane...")
         self.terazOdt.setAlignment(QtCore.Qt.AlignCenter)
@@ -352,9 +356,10 @@ class Window(QMainWindow):
 
     def _updateUi(self):
         if self.showed == 0:
-            self.setFixedHeight(780)
+            self.setFixedHeight(800)
             self.obszarGl.addLayout(self.obszarWideo)
             self.obszarGl.addLayout(self.stronaWysz)
+            self.obszarGl.addWidget(self.progresPob)
             self.obszarGl.addWidget(self.terazOdt)
             self.obszarGl.addWidget(self.rozmiarKolejki)
             self.obszarGl.addWidget(self.kontrolkiOdt)
@@ -435,12 +440,12 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _do(self, id):
-        self.worker = Dv._DownloadMP3(id, self.downloads_path)
+        self.worker = Dv._DownloadMP3(id, self.downloads_path, self.progresPob)
         self.worker.start()
         self.worker.quit()
 
     def _dv(self, id):
-        self.worker = Dv._DownloadMP4(id, self.downloads_path)
+        self.worker = Dv._DownloadMP4(id, self.downloads_path, self.progresPob)
         self.worker.start()
         self.worker.quit()
 
