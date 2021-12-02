@@ -12,18 +12,19 @@ import time
 import webbrowser
 from pathlib import Path
 from youtube_search import YoutubeSearch
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import (QFont, QImage, QPixmap)
+from PyQt5 import (QtCore)
+from PyQt5.QtCore import (Qt, QTimer)
+from PyQt5.QtGui import (QFont, QImage, QPixmap, QIcon)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
-                             QStatusBar, QApplication, QGridLayout, QCheckBox
+                             QStatusBar, QApplication, QGridLayout, QCheckBox,
+                             QStyleFactory, QComboBox, QStyle
                              )
 
 import Download as Dv
 
 
-__version__ = 'v0.2.2 - "Download Fix"'
+__version__ = 'v0.2.3 - "New Design and Code Optimize"'
 __author__ = 'Sebastian Kolanowski'
 
 
@@ -31,6 +32,7 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Youtube App")
+        self.setWindowIcon(QIcon("./Icons/Youtube.png"))
         self.setFixedWidth(700)
         self.setFixedHeight(100)
         self.generalLayout = QHBoxLayout()
@@ -47,242 +49,283 @@ class Window(QMainWindow):
             self.downloads_path += "/"
             self.setFont(QFont('PatrickHand', 12))
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
+        self.themeChList = QStyleFactory.keys()
         self.i = 0
-        self.queue = []
+        self.kolejkaOdt = []
         self.ifSkip = 0
         self.showed = 0
-        self.duration = 0
+        self.czasTrwania = 0
         self.timer = QTimer(self)
         self.Instance = vlc.Instance('--no-video')
-        self.player = self.Instance.media_player_new()
+        self.odtwarzacz = self.Instance.media_player_new()
 
         self._createMenu()
         self._createUi()
         self._createStatusBar()
 
     def _createUi(self):
-        self.main = QVBoxLayout()
+        self.obszarGl = QVBoxLayout()
 
-        self.butt1 = QPushButton("Pauza/Wznów")
-        self.butt2 = QPushButton("Zatrzymaj")
-        self.volText = QLabel("Głośność 🔈: ")
-        self.volText.setFixedWidth(80)
-        self.volVal = QLabel()
-        self.volVal.setText("100")
-        self.volVal.setFixedWidth(30)
-        self.repeat = QCheckBox("Powtarzaj")
-        self.slider = QSlider(Qt.Horizontal)
-        self.slider.setValue(100)
-        self.slider.setMaximum(100)
-        self.slider.setFixedWidth(150)
-        self.controls = QHBoxLayout()
-        self.controls.addWidget(self.butt1)
-        self.controls.addWidget(self.butt2)
-        self.controls.addWidget(self.repeat)
-        self.controls.addWidget(self.volText)
-        self.controls.addWidget(self.slider)
-        self.controls.addWidget(self.volVal)
+        self.themeCh = QComboBox()
+        self.themeCh.addItems(self.themeChList)
+        self.themeCh.currentIndexChanged.connect(self._changeTheme)
+        self.poleWysz = QLineEdit()
+        self.poleWysz.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
+        self.przyciskWysz = QPushButton("Szukaj")
+        self.przyciskWysz.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
+        self.przyciskWysz.clicked.connect(self._getVideo)
+        self.obszarWysz = QHBoxLayout()
+        self.obszarWysz.addWidget(self.themeCh)
+        self.obszarWysz.addWidget(self.poleWysz)
+        self.obszarWysz.addWidget(self.przyciskWysz)
+        self.obszarGl.addLayout(self.obszarWysz)
 
-        self.text = QLineEdit()
-        self.text.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
-        self.button = QPushButton("Szukaj")
-        self.button.clicked.connect(self._getVideo)
-        self.search = QHBoxLayout()
-        self.search.addWidget(self.text)
-        self.search.addWidget(self.button)
-        self.main.addLayout(self.search)
+        self.stronaWynikow = QLabel()
+        self.stronaWynikow.setText(str(self.i+1))
+        self.stronaWynikow.setAlignment(QtCore.Qt.AlignCenter)
+        self.stronaWLewo = QPushButton()
+        self.stronaWLewo.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
+        self.stronaWPrawo = QPushButton()
+        self.stronaWPrawo.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
+        self.stronaWPrawo.clicked.connect(self._increase)
+        self.stronaWLewo.clicked.connect(self._decrease)
+        self.stronaWysz = QHBoxLayout()
+        self.stronaWysz.addWidget(self.stronaWLewo)
+        self.stronaWysz.addWidget(self.stronaWynikow)
+        self.stronaWysz.addWidget(self.stronaWPrawo)
 
-        self.strona = QLabel()
-        self.strona.setText(str(self.i+1))
-        self.strona.setAlignment(QtCore.Qt.AlignCenter)
-        self.left = QPushButton("⬅️ Poprzednia")
-        self.right = QPushButton("Następna ➡️")
-        self.right.clicked.connect(self._increase)
-        self.left.clicked.connect(self._decrease)
-        self.page = QHBoxLayout()
-        self.page.addWidget(self.left)
-        self.page.addWidget(self.strona)
-        self.page.addWidget(self.right)
+        self.terazOdt = QLabel()
+        self.terazOdt.setText("Nic nie jest odtwarzane...")
+        self.terazOdt.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.played = QLabel()
-        self.played.setText("Nic nie jest odtwarzane...")
-        self.played.setAlignment(QtCore.Qt.AlignCenter)
+        self.rozmiarKolejki = QLabel()
+        self.rozmiarKolejki.setText("Kolejka jest pusta...")
+        self.rozmiarKolejki.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.queueLen = QLabel()
-        self.queueLen.setText("Kolejka jest pusta...")
-        self.queueLen.setAlignment(QtCore.Qt.AlignCenter)
+        self.kontrolkiOdt = QLabel("Kontrolki do odtwarzacza")
+        self.kontrolkiOdt.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.kon = QLabel("Kontrolki do odtwarzacza")
-        self.kon.setAlignment(QtCore.Qt.AlignCenter)
+        self.przyciskPauzy = QPushButton("Pauza")
+        self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.przyciskZatrzymania = QPushButton("Zatrzymaj")
+        self.przyciskZatrzymania.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.przyciskDzwieku = QPushButton("Wycisz")
+        self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+        self.wartoscDzwieku = QLabel()
+        self.wartoscDzwieku.setText("100")
+        self.wartoscDzwieku.setFixedWidth(30)
+        self.powtarzanieUtworu = QCheckBox("Powtarzaj")
+        self.poziomGlosu = QSlider(Qt.Horizontal)
+        self.poziomGlosu.setValue(100)
+        self.poziomGlosu.setMaximum(100)
+        self.poziomGlosu.setFixedWidth(150)
+        self.obszarKontrolek = QHBoxLayout()
+        self.obszarKontrolek.addWidget(self.przyciskPauzy)
+        self.obszarKontrolek.addWidget(self.przyciskZatrzymania)
+        self.obszarKontrolek.addWidget(self.powtarzanieUtworu)
+        self.obszarKontrolek.addWidget(self.przyciskDzwieku)
+        self.obszarKontrolek.addWidget(self.poziomGlosu)
+        self.obszarKontrolek.addWidget(self.wartoscDzwieku)
 
-        self.musicBar = QSlider(Qt.Horizontal)
-        self.musicBar.setMaximum(1000)
-        self.musicBar.setValue(0)
-        self.musicBar.sliderMoved.connect(self._progress)
-        self.progVal = QLabel("0/0")
-        self.progVal.setFixedWidth(80)
-        self.skip = QPushButton("Skip")
-        self.skip.setFixedWidth(90)
-        self.musicProgress = QHBoxLayout()
-        self.musicProgress.addWidget(self.musicBar)
-        self.musicProgress.addWidget(self.progVal)
-        self.musicProgress.addWidget(self.skip)
+        self.pasekProgresu = QSlider(Qt.Horizontal)
+        self.pasekProgresu.setMaximum(1000)
+        self.pasekProgresu.setValue(0)
+        self.pasekProgresu.sliderMoved.connect(self._progress)
+        self.wartoscProgresu = QLabel("0/0")
+        self.wartoscProgresu.setFixedWidth(80)
+        self.przyciskPominiecia = QPushButton("Pomiń")
+        self.przyciskPominiecia.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        self.przyciskPominiecia.setFixedWidth(90)
+        self.obszarProgresu = QHBoxLayout()
+        self.obszarProgresu.addWidget(self.pasekProgresu)
+        self.obszarProgresu.addWidget(self.wartoscProgresu)
+        self.obszarProgresu.addWidget(self.przyciskPominiecia)
 
-        self.generalLayout.addLayout(self.main)
-
-# <--------------------------------------------------------------------------->
-
-        self.image1 = QImage()
-        self.imgL1 = QLabel()
-        self.downMp1 = QPushButton("MP3 ⬇")
-        self.downMv1 = QPushButton("MP4 ⬇")
-        self.p1 = QPushButton("PLY ▶️")
-        self.yt1 = QPushButton("YT")
-
-        self.image2 = QImage()
-        self.imgL2 = QLabel()
-        self.downMp2 = QPushButton("MP3 ⬇")
-        self.downMv2 = QPushButton("MP4 ⬇")
-        self.p2 = QPushButton("PLY ▶️")
-        self.yt2 = QPushButton("YT")
-
-        self.image3 = QImage()
-        self.imgL3 = QLabel()
-        self.downMp3 = QPushButton("MP3 ⬇")
-        self.downMv3 = QPushButton("MP4 ⬇")
-        self.p3 = QPushButton("PLY ▶️")
-        self.yt3 = QPushButton("YT")
-
-        self.image4 = QImage()
-        self.imgL4 = QLabel()
-        self.downMp4 = QPushButton("MP3 ⬇")
-        self.downMv4 = QPushButton("MP4 ⬇")
-        self.p4 = QPushButton("PLY ▶️")
-        self.yt4 = QPushButton("YT")
-
-        self.image5 = QImage()
-        self.imgL5 = QLabel()
-        self.downMp5 = QPushButton("MP3 ⬇")
-        self.downMv5 = QPushButton("MP4 ⬇")
-        self.p5 = QPushButton("PLY ▶️")
-        self.yt5 = QPushButton("YT")
-
-        self.image6 = QImage()
-        self.imgL6 = QLabel()
-        self.downMp6 = QPushButton("MP3 ⬇")
-        self.downMv6 = QPushButton("MP4 ⬇")
-        self.p6 = QPushButton("PLY ▶️")
-        self.yt6 = QPushButton("YT")
+        self.generalLayout.addLayout(self.obszarGl)
 
 # <--------------------------------------------------------------------------->
 
-        self.downMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
-        self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
-        self.p1.clicked.connect(
+        self.obrazNr1 = QImage()
+        self.obrazDNr1 = QLabel()
+        self.obrazDNr1.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp1 = QPushButton("MP3")
+        self.pobierzMp1.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv1 = QPushButton("MP4")
+        self.pobierzMv1.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtworz1 = QPushButton("Odt")
+        self.odtworz1.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb1 = QPushButton("YT")
+        self.odtworzWeb1.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        self.obrazNr2 = QImage()
+        self.obrazDNr2 = QLabel()
+        self.obrazDNr2.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp2 = QPushButton("MP3")
+        self.pobierzMp2.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv2 = QPushButton("MP4")
+        self.pobierzMv2.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtworz2 = QPushButton("Odt")
+        self.odtworz2.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb2 = QPushButton("YT")
+        self.odtworzWeb2.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        self.obrazNr3 = QImage()
+        self.obrazDNr3 = QLabel()
+        self.obrazDNr3.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp3 = QPushButton("MP3")
+        self.pobierzMp3.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv3 = QPushButton("MP4")
+        self.pobierzMv3.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtworz3 = QPushButton("Odt")
+        self.odtworz3.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb3 = QPushButton("YT")
+        self.odtworzWeb3.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        self.obrazNr4 = QImage()
+        self.obrazDNr4 = QLabel()
+        self.obrazDNr4.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp4 = QPushButton("MP3")
+        self.pobierzMp4.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv4 = QPushButton("MP4")
+        self.pobierzMv4.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtowrz4 = QPushButton("Odt")
+        self.odtowrz4.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb4 = QPushButton("YT")
+        self.odtworzWeb4.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        self.obrazNr5 = QImage()
+        self.obrazDNr5 = QLabel()
+        self.obrazDNr5.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp5 = QPushButton("MP3")
+        self.pobierzMp5.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv5 = QPushButton("MP4")
+        self.pobierzMv5.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtworz5 = QPushButton("Odt")
+        self.odtworz5.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb5 = QPushButton("YT")
+        self.odtworzWeb5.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+        self.obrazNr6 = QImage()
+        self.obrazDNr6 = QLabel()
+        self.obrazDNr6.setAlignment(QtCore.Qt.AlignCenter)
+        self.pobierzMp6 = QPushButton("MP3")
+        self.pobierzMp6.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv6 = QPushButton("MP4")
+        self.pobierzMv6.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.odtworz6 = QPushButton("Odt")
+        self.odtworz6.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.odtworzWeb6 = QPushButton("YT")
+        self.odtworzWeb6.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+
+# <--------------------------------------------------------------------------->
+
+        self.pobierzMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
+        self.pobierzMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
+        self.odtworz1.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0],
                              self.time[(self.i*6)+0]))
 
-        self.downMp2.clicked.connect(lambda: self._do(self.id[(self.i*6)+1]))
-        self.downMv2.clicked.connect(lambda: self._dv(self.id[(self.i*6)+1]))
-        self.p2.clicked.connect(
+        self.pobierzMp2.clicked.connect(lambda: self._do(self.id[(self.i*6)+1]))
+        self.pobierzMv2.clicked.connect(lambda: self._dv(self.id[(self.i*6)+1]))
+        self.odtworz2.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1],
                              self.time[(self.i*6)+1]))
 
-        self.downMp3.clicked.connect(lambda: self._do(self.id[(self.i*6)+2]))
-        self.downMv3.clicked.connect(lambda: self._dv(self.id[(self.i*6)+2]))
-        self.p3.clicked.connect(
+        self.pobierzMp3.clicked.connect(lambda: self._do(self.id[(self.i*6)+2]))
+        self.pobierzMv3.clicked.connect(lambda: self._dv(self.id[(self.i*6)+2]))
+        self.odtworz3.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2],
                              self.time[(self.i*6)+2]))
 
-        self.downMp4.clicked.connect(lambda: self._do(self.id[(self.i*6)+3]))
-        self.downMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+3]))
-        self.p4.clicked.connect(
+        self.pobierzMp4.clicked.connect(lambda: self._do(self.id[(self.i*6)+3]))
+        self.pobierzMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+3]))
+        self.odtowrz4.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3],
                              self.time[(self.i*6)+3]))
 
-        self.downMp5.clicked.connect(lambda: self._do(self.id[(self.i*6)+4]))
-        self.downMv5.clicked.connect(lambda: self._dv(self.id[(self.i*6)+4]))
-        self.p5.clicked.connect(
+        self.pobierzMp5.clicked.connect(lambda: self._do(self.id[(self.i*6)+4]))
+        self.pobierzMv5.clicked.connect(lambda: self._dv(self.id[(self.i*6)+4]))
+        self.odtworz5.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4],
                              self.time[(self.i*6)+4]))
 
-        self.downMp6.clicked.connect(lambda: self._do(self.id[(self.i*6)+5]))
-        self.downMv6.clicked.connect(lambda: self._dv(self.id[(self.i*6)+5]))
-        self.p6.clicked.connect(
+        self.pobierzMp6.clicked.connect(lambda: self._do(self.id[(self.i*6)+5]))
+        self.pobierzMv6.clicked.connect(lambda: self._dv(self.id[(self.i*6)+5]))
+        self.odtworz6.clicked.connect(
             lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5],
                              self.time[(self.i*6)+5]))
 
 # <--------------------------------------------------------------------------->
 
-        self.video = QGridLayout()
+        self.obszarWideo = QGridLayout()
 
-        self.do1 = QHBoxLayout()
-        self.do1.addWidget(self.downMp1)
-        self.do1.addWidget(self.downMv1)
-        self.do2 = QHBoxLayout()
-        self.do2.addWidget(self.downMp2)
-        self.do2.addWidget(self.downMv2)
-        self.do3 = QHBoxLayout()
-        self.do3.addWidget(self.downMp3)
-        self.do3.addWidget(self.downMv3)
-        self.do4 = QHBoxLayout()
-        self.do4.addWidget(self.downMp4)
-        self.do4.addWidget(self.downMv4)
-        self.do5 = QHBoxLayout()
-        self.do5.addWidget(self.downMp5)
-        self.do5.addWidget(self.downMv5)
-        self.do6 = QHBoxLayout()
-        self.do6.addWidget(self.downMp6)
-        self.do6.addWidget(self.downMv6)
-
-# <--------------------------------------------------------------------------->
-
-        self.od1 = QHBoxLayout()
-        self.od1.addWidget(self.p1)
-        self.od1.addWidget(self.yt1)
-        self.od2 = QHBoxLayout()
-        self.od2.addWidget(self.p2)
-        self.od2.addWidget(self.yt2)
-        self.od3 = QHBoxLayout()
-        self.od3.addWidget(self.p3)
-        self.od3.addWidget(self.yt3)
-        self.od4 = QHBoxLayout()
-        self.od4.addWidget(self.p4)
-        self.od4.addWidget(self.yt4)
-        self.od5 = QHBoxLayout()
-        self.od5.addWidget(self.p5)
-        self.od5.addWidget(self.yt5)
-        self.od6 = QHBoxLayout()
-        self.od6.addWidget(self.p6)
-        self.od6.addWidget(self.yt6)
+        self.obszarPob1 = QHBoxLayout()
+        self.obszarPob1.addWidget(self.pobierzMp1)
+        self.obszarPob1.addWidget(self.pobierzMv1)
+        self.obszarPob2 = QHBoxLayout()
+        self.obszarPob2.addWidget(self.pobierzMp2)
+        self.obszarPob2.addWidget(self.pobierzMv2)
+        self.obszarPob3 = QHBoxLayout()
+        self.obszarPob3.addWidget(self.pobierzMp3)
+        self.obszarPob3.addWidget(self.pobierzMv3)
+        self.obszarPob4 = QHBoxLayout()
+        self.obszarPob4.addWidget(self.pobierzMp4)
+        self.obszarPob4.addWidget(self.pobierzMv4)
+        self.obszarPob5 = QHBoxLayout()
+        self.obszarPob5.addWidget(self.pobierzMp5)
+        self.obszarPob5.addWidget(self.pobierzMv5)
+        self.obszarPob6 = QHBoxLayout()
+        self.obszarPob6.addWidget(self.pobierzMp6)
+        self.obszarPob6.addWidget(self.pobierzMv6)
 
 # <--------------------------------------------------------------------------->
 
-        self.video.addWidget(self.imgL1, 0, 0)
-        self.video.addLayout(self.do1, 1, 0)
-        self.video.addLayout(self.od1, 2, 0)
-        self.video.addWidget(self.imgL4, 3, 0)
-        self.video.addLayout(self.do4, 4, 0)
-        self.video.addLayout(self.od4, 5, 0)
+        self.obszarOdt1 = QHBoxLayout()
+        self.obszarOdt1.addWidget(self.odtworz1)
+        self.obszarOdt1.addWidget(self.odtworzWeb1)
+        self.obszarOdt2 = QHBoxLayout()
+        self.obszarOdt2.addWidget(self.odtworz2)
+        self.obszarOdt2.addWidget(self.odtworzWeb2)
+        self.obszarOdt3 = QHBoxLayout()
+        self.obszarOdt3.addWidget(self.odtworz3)
+        self.obszarOdt3.addWidget(self.odtworzWeb3)
+        self.obszarOdt4 = QHBoxLayout()
+        self.obszarOdt4.addWidget(self.odtowrz4)
+        self.obszarOdt4.addWidget(self.odtworzWeb4)
+        self.obszarOdt5 = QHBoxLayout()
+        self.obszarOdt5.addWidget(self.odtworz5)
+        self.obszarOdt5.addWidget(self.odtworzWeb5)
+        self.obszarOdt6 = QHBoxLayout()
+        self.obszarOdt6.addWidget(self.odtworz6)
+        self.obszarOdt6.addWidget(self.odtworzWeb6)
 
-        self.video.addWidget(self.imgL2, 0, 1)
-        self.video.addLayout(self.do2, 1, 1)
-        self.video.addLayout(self.od2, 2, 1)
-        self.video.addWidget(self.imgL5, 3, 1)
-        self.video.addLayout(self.do5, 4, 1)
-        self.video.addLayout(self.od5, 5, 1)
+# <--------------------------------------------------------------------------->
 
-        self.video.addWidget(self.imgL3, 0, 2)
-        self.video.addLayout(self.do3, 1, 2)
-        self.video.addLayout(self.od3, 2, 2)
-        self.video.addWidget(self.imgL6, 3, 2)
-        self.video.addLayout(self.do6, 4, 2)
-        self.video.addLayout(self.od6, 5, 2)
+        self.obszarWideo.addWidget(self.obrazDNr1, 0, 0)
+        self.obszarWideo.addLayout(self.obszarPob1, 1, 0)
+        self.obszarWideo.addLayout(self.obszarOdt1, 2, 0)
+        self.obszarWideo.addWidget(self.obrazDNr4, 3, 0)
+        self.obszarWideo.addLayout(self.obszarPob4, 4, 0)
+        self.obszarWideo.addLayout(self.obszarOdt4, 5, 0)
+
+        self.obszarWideo.addWidget(self.obrazDNr2, 0, 1)
+        self.obszarWideo.addLayout(self.obszarPob2, 1, 1)
+        self.obszarWideo.addLayout(self.obszarOdt2, 2, 1)
+        self.obszarWideo.addWidget(self.obrazDNr5, 3, 1)
+        self.obszarWideo.addLayout(self.obszarPob5, 4, 1)
+        self.obszarWideo.addLayout(self.obszarOdt5, 5, 1)
+
+        self.obszarWideo.addWidget(self.obrazDNr3, 0, 2)
+        self.obszarWideo.addLayout(self.obszarPob3, 1, 2)
+        self.obszarWideo.addLayout(self.obszarOdt3, 2, 2)
+        self.obszarWideo.addWidget(self.obrazDNr6, 3, 2)
+        self.obszarWideo.addLayout(self.obszarPob6, 4, 2)
+        self.obszarWideo.addLayout(self.obszarOdt6, 5, 2)
 
 # <--------------------------------------------------------------------------->
 
     def _getVideo(self):
-        if self.text.text() == '':
+        if self.poleWysz.text() == '':
             self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
 
         self.id = []
@@ -290,10 +333,10 @@ class Window(QMainWindow):
         self.title = []
         self.mylist = []
         self.channel = []
-        self.results = YoutubeSearch("'" + self.text.text() + "'",
+        self.wynikiWysz = YoutubeSearch("'" + self.poleWysz.text() + "'",
                                      max_results=60).to_dict()
 
-        for v in self.results:
+        for v in self.wynikiWysz:
             self.id.append(v['id'])
             self.time.append(v['duration'])
             self.title.append(v['title'])
@@ -301,8 +344,8 @@ class Window(QMainWindow):
             self.channel.append(v['channel'])
 
         self.i = 0
-        self.strona.setText(str(self.i+1))
-        if len(self.results) >= 6:
+        self.stronaWynikow.setText(str(self.i+1))
+        if len(self.wynikiWysz) >= 6:
             self._updateUi()
 
 # <--------------------------------------------------------------------------->
@@ -310,82 +353,83 @@ class Window(QMainWindow):
     def _updateUi(self):
         if self.showed == 0:
             self.setFixedHeight(780)
-            self.main.addLayout(self.video)
-            self.main.addLayout(self.page)
-            self.main.addWidget(self.played)
-            self.main.addWidget(self.queueLen)
-            self.main.addWidget(self.kon)
-            self.main.addLayout(self.musicProgress)
-            self.main.addLayout(self.controls)
+            self.obszarGl.addLayout(self.obszarWideo)
+            self.obszarGl.addLayout(self.stronaWysz)
+            self.obszarGl.addWidget(self.terazOdt)
+            self.obszarGl.addWidget(self.rozmiarKolejki)
+            self.obszarGl.addWidget(self.kontrolkiOdt)
+            self.obszarGl.addLayout(self.obszarProgresu)
+            self.obszarGl.addLayout(self.obszarKontrolek)
 
-            self.butt1.clicked.connect(lambda: self._pause())
-            self.butt2.clicked.connect(lambda: self._stop())
-            self.slider.valueChanged.connect(self._volume)
-            self.skip.clicked.connect(lambda: self._skip())
+            self.przyciskPauzy.clicked.connect(lambda: self._pause())
+            self.przyciskZatrzymania.clicked.connect(lambda: self._stop())
+            self.przyciskDzwieku.clicked.connect(lambda: self._mute())
+            self.poziomGlosu.valueChanged.connect(self._volume)
+            self.przyciskPominiecia.clicked.connect(lambda: self._skip())
 
             self.timer.timeout.connect(self._music)
             self.timer.start(100)
 
-            self.yt1.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb1.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+0]))
-            self.yt2.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb2.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+1]))
-            self.yt3.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb3.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+2]))
-            self.yt4.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb4.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+3]))
-            self.yt5.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb5.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+4]))
-            self.yt6.clicked.connect(lambda: webbrowser.open(
+            self.odtworzWeb6.clicked.connect(lambda: webbrowser.open(
                 "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+5]))
 
         self.showed = 1
 
 # <--------------------------------------------------------------------------->
 
-        self.image1.loadFromData(requests.get(
+        self.obrazNr1.loadFromData(requests.get(
             self.mylist[(self.i*6)+0]).content)
-        zdj1 = QPixmap(self.image1)
-        self.imgL1.setPixmap(zdj1.scaled(200, 100))
+        zdj1 = QPixmap(self.obrazNr1)
+        self.obrazDNr1.setPixmap(zdj1.scaled(200, 100))
 
-        self.image2.loadFromData(requests.get(
+        self.obrazNr2.loadFromData(requests.get(
             self.mylist[(self.i*6)+1]).content)
-        zdj2 = QPixmap(self.image2)
-        self.imgL2.setPixmap(zdj2.scaled(200, 100))
+        zdj2 = QPixmap(self.obrazNr2)
+        self.obrazDNr2.setPixmap(zdj2.scaled(200, 100))
 
-        self.image3.loadFromData(requests.get(
+        self.obrazNr3.loadFromData(requests.get(
             self.mylist[(self.i*6)+2]).content)
-        zdj3 = QPixmap(self.image3)
-        self.imgL3.setPixmap(zdj3.scaled(200, 100))
+        zdj3 = QPixmap(self.obrazNr3)
+        self.obrazDNr3.setPixmap(zdj3.scaled(200, 100))
 
-        self.image4.loadFromData(requests.get(
+        self.obrazNr4.loadFromData(requests.get(
             self.mylist[(self.i*6)+3]).content)
-        zdj4 = QPixmap(self.image4)
-        self.imgL4.setPixmap(zdj4.scaled(200, 100))
+        zdj4 = QPixmap(self.obrazNr4)
+        self.obrazDNr4.setPixmap(zdj4.scaled(200, 100))
 
-        self.image5.loadFromData(requests.get(
+        self.obrazNr5.loadFromData(requests.get(
             self.mylist[(self.i*6)+4]).content)
-        zdj5 = QPixmap(self.image5)
-        self.imgL5.setPixmap(zdj5.scaled(200, 100))
+        zdj5 = QPixmap(self.obrazNr5)
+        self.obrazDNr5.setPixmap(zdj5.scaled(200, 100))
 
-        self.image6.loadFromData(requests.get(
+        self.obrazNr6.loadFromData(requests.get(
             self.mylist[(self.i*6)+5]).content)
-        zdj6 = QPixmap(self.image6)
-        self.imgL6.setPixmap(zdj6.scaled(200, 100))
+        zdj6 = QPixmap(self.obrazNr6)
+        self.obrazDNr6.setPixmap(zdj6.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
-        self.imgL1.setToolTip("Tytuł: " + self.title[(self.i*6)+0]
+        self.obrazDNr1.setToolTip("Tytuł: " + self.title[(self.i*6)+0]
                               + "\nKanał: " + self.channel[(self.i*6)+0])
-        self.imgL2.setToolTip("Tytuł: " + self.title[(self.i*6)+1]
+        self.obrazDNr2.setToolTip("Tytuł: " + self.title[(self.i*6)+1]
                               + "\nKanał: " + self.channel[(self.i*6)+1])
-        self.imgL3.setToolTip("Tytuł: " + self.title[(self.i*6)+2]
+        self.obrazDNr3.setToolTip("Tytuł: " + self.title[(self.i*6)+2]
                               + "\nKanał: " + self.channel[(self.i*6)+2])
-        self.imgL4.setToolTip("Tytuł: " + self.title[(self.i*6)+3]
+        self.obrazDNr4.setToolTip("Tytuł: " + self.title[(self.i*6)+3]
                               + "\nKanał: " + self.channel[(self.i*6)+3])
-        self.imgL5.setToolTip("Tytuł: " + self.title[(self.i*6)+4]
+        self.obrazDNr5.setToolTip("Tytuł: " + self.title[(self.i*6)+4]
                               + "\nKanał: " + self.channel[(self.i*6)+4])
-        self.imgL6.setToolTip("Tytuł: " + self.title[(self.i*6)+5]
+        self.obrazDNr6.setToolTip("Tytuł: " + self.title[(self.i*6)+5]
                               + "\nKanał: " + self.channel[(self.i*6)+5])
 
 # <--------------------------------------------------------------------------->
@@ -403,91 +447,113 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _increase(self):
-        if self.i < int(len(self.results)/6)-1:
+        if self.i < int(len(self.wynikiWysz)/6)-1:
             self.i += 1
-            self.strona.setText(str(self.i+1))
+            self.stronaWynikow.setText(str(self.i+1))
             self._updateUi()
 
     def _decrease(self):
         if self.i > 0:
             self.i -= 1
-            self.strona.setText(str(self.i+1))
+            self.stronaWynikow.setText(str(self.i+1))
             self._updateUi()
 
 # <--------------------------------------------------------------------------->
 
     def _pl(self, id, title, time):
-        if self.player.is_playing() and self.ifSkip == 0:
-            self.queue.append(id)
-            self.queue.append(title)
-            self.queue.append(time)
-            self.queueLen.setText("W kolejce: " + str(int(len(self.queue)/3)))
+        if self.odtwarzacz.is_playing() and self.ifSkip == 0:
+            self.kolejkaOdt.append(id)
+            self.kolejkaOdt.append(title)
+            self.kolejkaOdt.append(time)
+            self.rozmiarKolejki.setText("W kolejce: " + str(int(len(self.kolejkaOdt)/3)))
         else:
-            self.duration = time
-            self.played.setText("Teraz odtwarzane: " + title)
-            video = pafy.new("https://www.youtube.com/watch?v=" + id)
+            self.czasTrwania = time
+            self.terazOdt.setText("Teraz odtwarzane: " + title)
+            video = pafy.new(id)
             best = video.getbest()
             playurl = best.url
             Media = self.Instance.media_new(playurl)
             Media.get_mrl()
-            self.player.set_media(Media)
-            self.player.play()
-            self.musicBar.setValue(0)
+            self.odtwarzacz.set_media(Media)
+            self.odtwarzacz.play()
+            self.pasekProgresu.setValue(0)
 
 # <--------------------------------------------------------------------------->
 
     def _pause(self):
-        self.player.pause()
+        self.odtwarzacz.pause()
+        """if self.odtwarzacz.get_pause() == 1:
+            self.odtwarzacz.set_pause(0)
+            self.przyciskPauzy.setText("Pause")
+            self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        else:
+            self.odtwarzacz.set_pause(1)
+            self.przyciskPauzy.setText("Unpause")
+            self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))"""
+
+    def _mute(self):
+        if self.odtwarzacz.audio_get_mute():
+            self.odtwarzacz.audio_set_mute(False)
+            self.przyciskDzwieku.setText("Wycisz")
+            self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+        else:
+            self.odtwarzacz.audio_set_mute(True)
+            self.przyciskDzwieku.setText("Odcisz")
+            self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+
 
     def _stop(self):
-        self.player.stop()
-        self.played.setText("Nic nie jest odtwarzane...")
-        self.musicBar.setValue(0)
+        self.odtwarzacz.stop()
+        self.terazOdt.setText("Nic nie jest odtwarzane...")
+        self.pasekProgresu.setValue(0)
 
     def _skip(self):
-        if len(self.queue) > 0:
+        if len(self.kolejkaOdt) > 0:
             self.ifSkip = 1
-            self._pl(self.queue.pop(0), self.queue.pop(0), self.queue.pop(0))
+            self._pl(self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0))
             self.ifSkip = 0
-            if len(self.queue) <= 0:
-                self.queueLen.setText("Kolejka jest pusta...")
+            if len(self.kolejkaOdt) <= 0:
+                self.rozmiarKolejki.setText("Kolejka jest pusta...")
             else:
-                self.queueLen.setText("W kolejce: "
-                                      + str(int(len(self.queue)/3)))
+                self.rozmiarKolejki.setText("W kolejce: "
+                                      + str(int(len(self.kolejkaOdt)/3)))
 
     def _volume(self):
-        self.player.audio_set_volume(self.slider.value())
-        self.volVal.setText(str(self.slider.value()))
+        self.odtwarzacz.audio_set_volume(self.poziomGlosu.value())
+        self.wartoscDzwieku.setText(str(self.poziomGlosu.value()))
 
     def _progress(self):
-        self.player.set_position(self.musicBar.value()/1000)
+        self.odtwarzacz.set_position(self.pasekProgresu.value()/1000)
 
     def _music(self):
-        self.musicBar.setValue(int(self.player.get_position()*1000))
-        self.progVal.setText(
-            time.strftime('%M:%S', time.gmtime(self.player.get_time()/1000))
-            + "/" + str(self.duration))
-        if self.repeat.checkState() != 0:
-            if self.player.get_position()*100 >= 99:
-                self.player.set_position(0)
+        self.pasekProgresu.setValue(int(self.odtwarzacz.get_position()*1000))
+        self.wartoscProgresu.setText(
+            time.strftime('%M:%S', time.gmtime(self.odtwarzacz.get_time()/1000))
+            + "/" + str(self.czasTrwania))
+        if self.powtarzanieUtworu.checkState() != 0:
+            if self.odtwarzacz.get_position()*100 >= 99:
+                self.odtwarzacz.set_position(0)
         else:
-            if self.player.is_playing() == 0:
-                if len(self.queue) > 0 and self.player.get_position()*100 > 90:
-                    self._pl(self.queue.pop(0), self.queue.pop(
-                        0), self.queue.pop(0))
-                    if len(self.queue) <= 0:
-                        self.queueLen.setText("Kolejka jest pusta...")
+            if self.odtwarzacz.is_playing() == 0:
+                if len(self.kolejkaOdt) > 0 and self.odtwarzacz.get_position()*100 > 90:
+                    self._pl(self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(
+                        0), self.kolejkaOdt.pop(0))
+                    if len(self.kolejkaOdt) <= 0:
+                        self.rozmiarKolejki.setText("Kolejka jest pusta...")
 
 # <--------------------------------------------------------------------------->
 
+    def _changeTheme(self):
+        app.setStyle(self.themeCh.currentText())
+
     def _createMenu(self):
-        menu = self.menuBar().addMenu("&Menu")
-        menu.addAction('&Exit', self.close)
+        menu = self.menuBar().addMenu('Menu')
+        menu.addAction('Wyłącz', self.close)
 
     def _createStatusBar(self):
         status = QStatusBar()
-        status.showMessage("Wersja: " + __version__
-                           + ", Autor: " + __author__)
+        status.showMessage('Wersja: ' + __version__
+                           + ', Autor: ' + __author__)
         self.setStatusBar(status)
 
 # <--------------------------------------------------------------------------->
