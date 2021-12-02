@@ -45,6 +45,7 @@ class _DownloadMP4(QThread):
 
     def __init__(self, id, path, progresPob, parent=None):
         QThread.__init__(self, parent)
+        self.platform = platform.system()
         self.id = id
         self.path = path
         self.progresPob = progresPob
