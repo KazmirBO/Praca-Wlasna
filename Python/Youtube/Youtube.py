@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
 import Download as Dv
 
 
-__version__ = 'v0.2.3 - "New Design and Code Optimize"'
+__version__ = 'v0.2.4 - "Download Progress"'
 __author__ = 'Sebastian Kolanowski'
 
 
@@ -40,20 +40,20 @@ class Window(QMainWindow):
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
-        self.platform = platform.system()
-        self.downloads_path = str(Path.home() / "Downloads")
-        if self.platform == "Windows":
-            self.downloads_path += "\\"
+        self.platforma = platform.system()
+        self.sciezkaPob = str(Path.home() / "Downloads")
+        if self.platforma == "Windows":
+            self.sciezkaPob += "\\"
             self.setFont(QFont('Calibri', 12))
         else:
-            self.downloads_path += "/"
+            self.sciezkaPob += "/"
             self.setFont(QFont('PatrickHand', 12))
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
         self.themeChList = QStyleFactory.keys()
-        self.i = 0
+        self.zmienna = 0
         self.kolejkaOdt = []
-        self.ifSkip = 0
-        self.showed = 0
+        self.czyPom = 0
+        self.wyswietlono = 0
         self.czasTrwania = 0
         self.timer = QTimer(self)
         self.Instance = vlc.Instance('--no-video')
@@ -81,7 +81,7 @@ class Window(QMainWindow):
         self.obszarGl.addLayout(self.obszarWysz)
 
         self.stronaWynikow = QLabel()
-        self.stronaWynikow.setText(str(self.i+1))
+        self.stronaWynikow.setText(str(self.zmienna+1))
         self.stronaWynikow.setAlignment(QtCore.Qt.AlignCenter)
         self.stronaWLewo = QPushButton()
         self.stronaWLewo.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
@@ -223,41 +223,41 @@ class Window(QMainWindow):
 
 # <--------------------------------------------------------------------------->
 
-        self.pobierzMp1.clicked.connect(lambda: self._do(self.id[(self.i*6)+0]))
-        self.pobierzMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+0]))
+        self.pobierzMp1.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+0]))
+        self.pobierzMv1.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+0]))
         self.odtworz1.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+0], self.title[(self.i*6)+0],
-                             self.time[(self.i*6)+0]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+0], self.title[(self.zmienna*6)+0],
+                             self.time[(self.zmienna*6)+0]))
 
-        self.pobierzMp2.clicked.connect(lambda: self._do(self.id[(self.i*6)+1]))
-        self.pobierzMv2.clicked.connect(lambda: self._dv(self.id[(self.i*6)+1]))
+        self.pobierzMp2.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+1]))
+        self.pobierzMv2.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+1]))
         self.odtworz2.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+1], self.title[(self.i*6)+1],
-                             self.time[(self.i*6)+1]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+1], self.title[(self.zmienna*6)+1],
+                             self.time[(self.zmienna*6)+1]))
 
-        self.pobierzMp3.clicked.connect(lambda: self._do(self.id[(self.i*6)+2]))
-        self.pobierzMv3.clicked.connect(lambda: self._dv(self.id[(self.i*6)+2]))
+        self.pobierzMp3.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+2]))
+        self.pobierzMv3.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+2]))
         self.odtworz3.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+2], self.title[(self.i*6)+2],
-                             self.time[(self.i*6)+2]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+2], self.title[(self.zmienna*6)+2],
+                             self.time[(self.zmienna*6)+2]))
 
-        self.pobierzMp4.clicked.connect(lambda: self._do(self.id[(self.i*6)+3]))
-        self.pobierzMv1.clicked.connect(lambda: self._dv(self.id[(self.i*6)+3]))
+        self.pobierzMp4.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+3]))
+        self.pobierzMv1.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+3]))
         self.odtowrz4.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+3], self.title[(self.i*6)+3],
-                             self.time[(self.i*6)+3]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+3], self.title[(self.zmienna*6)+3],
+                             self.time[(self.zmienna*6)+3]))
 
-        self.pobierzMp5.clicked.connect(lambda: self._do(self.id[(self.i*6)+4]))
-        self.pobierzMv5.clicked.connect(lambda: self._dv(self.id[(self.i*6)+4]))
+        self.pobierzMp5.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+4]))
+        self.pobierzMv5.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+4]))
         self.odtworz5.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+4], self.title[(self.i*6)+4],
-                             self.time[(self.i*6)+4]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+4], self.title[(self.zmienna*6)+4],
+                             self.time[(self.zmienna*6)+4]))
 
-        self.pobierzMp6.clicked.connect(lambda: self._do(self.id[(self.i*6)+5]))
-        self.pobierzMv6.clicked.connect(lambda: self._dv(self.id[(self.i*6)+5]))
+        self.pobierzMp6.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+5]))
+        self.pobierzMv6.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+5]))
         self.odtworz6.clicked.connect(
-            lambda: self._pl(self.id[(self.i*6)+5], self.title[(self.i*6)+5],
-                             self.time[(self.i*6)+5]))
+            lambda: self._pl(self.ident[(self.zmienna*6)+5], self.title[(self.zmienna*6)+5],
+                             self.time[(self.zmienna*6)+5]))
 
 # <--------------------------------------------------------------------------->
 
@@ -332,7 +332,7 @@ class Window(QMainWindow):
         if self.poleWysz.text() == '':
             self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
 
-        self.id = []
+        self.ident = []
         self.time = []
         self.title = []
         self.mylist = []
@@ -341,21 +341,21 @@ class Window(QMainWindow):
                                      max_results=60).to_dict()
 
         for v in self.wynikiWysz:
-            self.id.append(v['id'])
+            self.ident.append(v['id'])
             self.time.append(v['duration'])
             self.title.append(v['title'])
             self.mylist.append(v['thumbnails'][0])
             self.channel.append(v['channel'])
 
-        self.i = 0
-        self.stronaWynikow.setText(str(self.i+1))
+        self.zmienna = 0
+        self.stronaWynikow.setText(str(self.zmienna+1))
         if len(self.wynikiWysz) >= 6:
             self._updateUi()
 
 # <--------------------------------------------------------------------------->
 
     def _updateUi(self):
-        if self.showed == 0:
+        if self.wyswietlono == 0:
             self.setFixedHeight(800)
             self.obszarGl.addLayout(self.obszarWideo)
             self.obszarGl.addLayout(self.stronaWysz)
@@ -376,97 +376,97 @@ class Window(QMainWindow):
             self.timer.start(100)
 
             self.odtworzWeb1.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+0]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+0]))
             self.odtworzWeb2.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+1]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+1]))
             self.odtworzWeb3.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+2]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+2]))
             self.odtworzWeb4.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+3]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+3]))
             self.odtworzWeb5.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+4]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+4]))
             self.odtworzWeb6.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.id[(self.i*6)+5]))
+                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+5]))
 
-        self.showed = 1
+        self.wyswietlono = 1
 
 # <--------------------------------------------------------------------------->
 
         self.obrazNr1.loadFromData(requests.get(
-            self.mylist[(self.i*6)+0]).content)
+            self.mylist[(self.zmienna*6)+0]).content)
         zdj1 = QPixmap(self.obrazNr1)
         self.obrazDNr1.setPixmap(zdj1.scaled(200, 100))
 
         self.obrazNr2.loadFromData(requests.get(
-            self.mylist[(self.i*6)+1]).content)
+            self.mylist[(self.zmienna*6)+1]).content)
         zdj2 = QPixmap(self.obrazNr2)
         self.obrazDNr2.setPixmap(zdj2.scaled(200, 100))
 
         self.obrazNr3.loadFromData(requests.get(
-            self.mylist[(self.i*6)+2]).content)
+            self.mylist[(self.zmienna*6)+2]).content)
         zdj3 = QPixmap(self.obrazNr3)
         self.obrazDNr3.setPixmap(zdj3.scaled(200, 100))
 
         self.obrazNr4.loadFromData(requests.get(
-            self.mylist[(self.i*6)+3]).content)
+            self.mylist[(self.zmienna*6)+3]).content)
         zdj4 = QPixmap(self.obrazNr4)
         self.obrazDNr4.setPixmap(zdj4.scaled(200, 100))
 
         self.obrazNr5.loadFromData(requests.get(
-            self.mylist[(self.i*6)+4]).content)
+            self.mylist[(self.zmienna*6)+4]).content)
         zdj5 = QPixmap(self.obrazNr5)
         self.obrazDNr5.setPixmap(zdj5.scaled(200, 100))
 
         self.obrazNr6.loadFromData(requests.get(
-            self.mylist[(self.i*6)+5]).content)
+            self.mylist[(self.zmienna*6)+5]).content)
         zdj6 = QPixmap(self.obrazNr6)
         self.obrazDNr6.setPixmap(zdj6.scaled(200, 100))
 
 # <--------------------------------------------------------------------------->
 
-        self.obrazDNr1.setToolTip("Tytuł: " + self.title[(self.i*6)+0]
-                              + "\nKanał: " + self.channel[(self.i*6)+0])
-        self.obrazDNr2.setToolTip("Tytuł: " + self.title[(self.i*6)+1]
-                              + "\nKanał: " + self.channel[(self.i*6)+1])
-        self.obrazDNr3.setToolTip("Tytuł: " + self.title[(self.i*6)+2]
-                              + "\nKanał: " + self.channel[(self.i*6)+2])
-        self.obrazDNr4.setToolTip("Tytuł: " + self.title[(self.i*6)+3]
-                              + "\nKanał: " + self.channel[(self.i*6)+3])
-        self.obrazDNr5.setToolTip("Tytuł: " + self.title[(self.i*6)+4]
-                              + "\nKanał: " + self.channel[(self.i*6)+4])
-        self.obrazDNr6.setToolTip("Tytuł: " + self.title[(self.i*6)+5]
-                              + "\nKanał: " + self.channel[(self.i*6)+5])
+        self.obrazDNr1.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+0]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+0])
+        self.obrazDNr2.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+1]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+1])
+        self.obrazDNr3.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+2]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+2])
+        self.obrazDNr4.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+3]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+3])
+        self.obrazDNr5.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+4]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+4])
+        self.obrazDNr6.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+5]
+                              + "\nKanał: " + self.channel[(self.zmienna*6)+5])
 
 # <--------------------------------------------------------------------------->
 
     def _do(self, id):
-        self.worker = Dv._DownloadMP3(id, self.downloads_path, self.progresPob)
+        self.worker = Dv._DownloadMP3(id, self.sciezkaPob, self.progresPob)
         self.worker.start()
         self.worker.quit()
 
     def _dv(self, id):
-        self.worker = Dv._DownloadMP4(id, self.downloads_path, self.progresPob)
+        self.worker = Dv._DownloadMP4(id, self.sciezkaPob, self.progresPob)
         self.worker.start()
         self.worker.quit()
 
 # <--------------------------------------------------------------------------->
 
     def _increase(self):
-        if self.i < int(len(self.wynikiWysz)/6)-1:
-            self.i += 1
-            self.stronaWynikow.setText(str(self.i+1))
+        if self.zmienna < int(len(self.wynikiWysz)/6)-1:
+            self.zmienna += 1
+            self.stronaWynikow.setText(str(self.zmienna+1))
             self._updateUi()
 
     def _decrease(self):
-        if self.i > 0:
-            self.i -= 1
-            self.stronaWynikow.setText(str(self.i+1))
+        if self.zmienna > 0:
+            self.zmienna -= 1
+            self.stronaWynikow.setText(str(self.zmienna+1))
             self._updateUi()
 
 # <--------------------------------------------------------------------------->
 
     def _pl(self, id, title, time):
-        if self.odtwarzacz.is_playing() and self.ifSkip == 0:
+        if self.odtwarzacz.is_playing() and self.czyPom == 0:
             self.kolejkaOdt.append(id)
             self.kolejkaOdt.append(title)
             self.kolejkaOdt.append(time)
@@ -514,9 +514,9 @@ class Window(QMainWindow):
 
     def _skip(self):
         if len(self.kolejkaOdt) > 0:
-            self.ifSkip = 1
+            self.czyPom = 1
             self._pl(self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0))
-            self.ifSkip = 0
+            self.czyPom = 0
             if len(self.kolejkaOdt) <= 0:
                 self.rozmiarKolejki.setText("Kolejka jest pusta...")
             else:

@@ -10,13 +10,13 @@ class _DownloadMP3(QThread):
 
     def __init__(self, id, path, progresPob, parent=None):
         QThread.__init__(self, parent)
-        self.platform = platform.system()
-        self.id = id
-        self.path = path
+        self.platforma = platform.system()
+        self.ident = id
+        self.sciezka = path
         self.progresPob = progresPob
 
     def run(self):
-        ydl_opts = {'outtmpl': self.path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': self.sciezka + '%(title)s.%(ext)s',
                     'audio-format': 'bestaudio',
                     'progress_hooks': [self.my_hook],
                     'postprocessors': [{
@@ -25,10 +25,10 @@ class _DownloadMP3(QThread):
                         'preferredquality': '192',
                         }], }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.id])
+            ydl.download([self.ident])
 
     def my_hook(self, d):
-        if self.platform == "Windows":
+        if self.platforma == "Windows":
             self.file_tuple = d['filename'].split("\\")[-1]
         else:
             self.file_tuple = d['filename'].split("/")[-1]
@@ -45,20 +45,20 @@ class _DownloadMP4(QThread):
 
     def __init__(self, id, path, progresPob, parent=None):
         QThread.__init__(self, parent)
-        self.platform = platform.system()
-        self.id = id
-        self.path = path
+        self.platforma = platform.system()
+        self.ident = id
+        self.sciezka = path
         self.progresPob = progresPob
 
     def run(self):
-        ydl_opts = {'outtmpl': self.path + '%(title)s.%(ext)s',
+        ydl_opts = {'outtmpl': self.sciezka + '%(title)s.%(ext)s',
                     'progress_hooks': [self.my_hook],
                     'format': 'best'}
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.id])
+            ydl.download([self.ident])
 
     def my_hook(self, d):
-        if self.platform == "Windows":
+        if self.platforma == "Windows":
             self.file_tuple = d['filename'].split("\\")[-1]
         else:
             self.file_tuple = d['filename'].split("/")[-1]
