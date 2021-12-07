@@ -27,8 +27,56 @@ import Download as Dv
 import Play
 
 
-__version__ = 'v0.2.5 - "Duration info and Search history"'
+__version__ = 'v0.2.6 - "Improve history"'
 __author__ = 'Sebastian Kolanowski'
+
+
+class oknoHistorii(QWidget):
+    def __init__(self, history, tempKat):
+        super().__init__()
+        self.history = history
+        self.tempKat = tempKat
+        self.layout = QVBoxLayout()
+        self.tekst = QLabel("Wybierz, który rekord usunąć\n(aby zmiany zostały"
+            + " wprowadzone, potrzebne jest ponowne uruhcominie programu):")
+        self.rekord = QComboBox()
+        self.rekord.setEditable(True)
+
+        self.polePrzy = QHBoxLayout()
+        self.usun = QPushButton("Usuń")
+        self.usun.clicked.connect(self._usun)
+        self.exit = QPushButton("Wyjdź")
+        self.exit.clicked.connect(lambda: self.close())
+        self.polePrzy.addWidget(self.usun)
+        self.polePrzy.addWidget(self.exit)
+
+        if os.path.isfile(self.tempKat):
+            historia = []
+            with open(self.tempKat, 'r') as f:
+                historia = f.read().splitlines()
+            f.close()
+            for f in historia:
+                if not f == '':
+                    self.rekord.addItem(f)
+
+        self.layout.addWidget(self.tekst)
+        self.layout.addWidget(self.rekord)
+        self.layout.addLayout(self.polePrzy)
+        self.setLayout(self.layout)
+
+    def _usun(self):
+        f = open(self.tempKat, 'r')
+        lst = []
+        for line in f:
+            if self.rekord.currentText() in line:
+                line = line.replace(self.rekord.currentText() ,'')
+            lst.append(line)
+        f.close()
+        f = open(self.tempKat, 'w')
+        for line in lst:
+            f.write(line)
+        f.close()
+        self.rekord.removeItem(self.rekord.findData(self.rekord.currentText()))
 
 
 class Window(QMainWindow):
@@ -90,6 +138,7 @@ class Window(QMainWindow):
             historia = []
             with open(self.tempKat, 'r') as f:
                 historia = f.read().splitlines()
+            f.close()
             for f in historia:
                 if not f == '':
                     self.poleWysz.addItem(f)
@@ -98,10 +147,15 @@ class Window(QMainWindow):
         self.przyciskWysz.setIcon(
             self.style().standardIcon(QStyle.SP_FileDialogContentsView))
         self.przyciskWysz.clicked.connect(self._getVideo)
+
+        self.historiaPrzy = QPushButton("Historia")
+        self.historiaPrzy.clicked.connect(self._showHistory)
+
         self.obszarWysz = QHBoxLayout()
         self.obszarWysz.addWidget(self.themeCh)
         self.obszarWysz.addWidget(self.poleWysz)
         self.obszarWysz.addWidget(self.przyciskWysz)
+        self.obszarWysz.addWidget(self.historiaPrzy)
         self.obszarGl.addLayout(self.obszarWysz)
         self.obszarGl.setAlignment(self.obszarWysz, Qt.AlignTop)
         self.stronaWynikow = QLabel()
@@ -166,7 +220,7 @@ class Window(QMainWindow):
         self.pasekProgresu.sliderMoved.connect(self._progress)
         self.wartoscProgresu = QLabel("0/0")
         self.wartoscProgresu.setFixedWidth(80)
-        self.przyciskPominiecia = QPushButton("Pomiń")
+        self.przyciskPominiecia = QPushButton("Następny")
         self.przyciskPominiecia.setIcon(
             self.style().standardIcon(QStyle.SP_MediaSkipForward))
         self.przyciskPominiecia.setFixedWidth(90)
@@ -307,7 +361,7 @@ class Window(QMainWindow):
         self.pobierzMp4.clicked.connect(
             lambda: self._do(self.ident[(self.zmienna*6)+3],
                              self.title[(self.zmienna*6)+3]))
-        self.pobierzMv1.clicked.connect(
+        self.pobierzMv4.clicked.connect(
             lambda: self._dv(self.ident[(self.zmienna*6)+3],
                              self.title[(self.zmienna*6)+3]))
         self.odtowrz4.clicked.connect(
@@ -415,6 +469,7 @@ class Window(QMainWindow):
                 with open(self.tempKat, 'w') as f:
                     for i in range(0, self.poleWysz.count()+1):
                         f.write('%s\n' % self.poleWysz.itemText(i))
+                f.close()
 
         self.ident = []
         self.time = []
@@ -535,7 +590,7 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _do(self, id, title):
-        if self.worker.isRunning() == False:
+        if not self.worker.isRunning():
             self.worker = Dv._DownloadMP3(id, self.sciezkaPob, self.progresPob)
             self.worker.start()
             self.worker.quit()
@@ -555,7 +610,7 @@ class Window(QMainWindow):
 
 
     def _dv(self, id, title):
-        if self.worker.isRunning() == False:
+        if not self.worker.isRunning():
             self.worker = Dv._DownloadMP4(id, self.sciezkaPob, self.progresPob)
             self.worker.start()
             self.worker.quit()
@@ -614,6 +669,12 @@ class Window(QMainWindow):
             self.odtwarzacz.set_media(Media)
             self.odtwarzacz.play()
             self.pasekProgresu.setValue(0)
+
+# <--------------------------------------------------------------------------->
+
+    def _showHistory(self):
+        self.w = oknoHistorii(self.poleWysz, self.tempKat)
+        self.w.show()
 
 # <--------------------------------------------------------------------------->
 
