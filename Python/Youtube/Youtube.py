@@ -4,27 +4,30 @@
 # https://stackoverflow.com/questions/18054500/how-to-use-youtube-dl-from-a-python-program
 
 import sys
+import os
 import requests
 import vlc
 import pafy
 import platform
 import time
 import webbrowser
+import tempfile
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import (QtCore)
-from PyQt5.QtCore import (Qt, QTimer)
+from PyQt5.QtCore import (Qt, QTimer, QThread)
 from PyQt5.QtGui import (QFont, QImage, QPixmap, QIcon)
 from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
                              QPushButton, QLabel, QWidget, QMainWindow,
                              QStatusBar, QApplication, QGridLayout, QCheckBox,
-                             QStyleFactory, QComboBox, QStyle
+                             QStyleFactory, QComboBox, QStyle, QMessageBox
                              )
 
 import Download as Dv
+import Play
 
 
-__version__ = 'v0.2.4 - "Download Progress"'
+__version__ = 'v0.2.5 - "Duration info and Search history"'
 __author__ = 'Sebastian Kolanowski'
 
 
@@ -34,21 +37,29 @@ class Window(QMainWindow):
         self.setWindowTitle("Youtube App")
         self.setWindowIcon(QIcon("./Icons/Youtube.png"))
         self.setFixedWidth(700)
-        self.setFixedHeight(100)
+        self.setFixedHeight(800)
         self.generalLayout = QHBoxLayout()
         self._centralWidget = QWidget(self)
         self._centralWidget.setLayout(self.generalLayout)
         self.setCentralWidget(self._centralWidget)
+
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
+
+        self.tempKat = tempfile.gettempdir()
+
         self.platforma = platform.system()
         self.sciezkaPob = str(Path.home() / "Downloads")
         if self.platforma == "Windows":
             self.sciezkaPob += "\\"
+            self.tempKat += "\\YTHistory.txt"
             self.setFont(QFont('Calibri', 12))
         else:
             self.sciezkaPob += "/"
+            self.tempKat += "/YTHistory.txt"
             self.setFont(QFont('PatrickHand', 12))
+
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
+
         self.themeChList = QStyleFactory.keys()
         self.zmienna = 0
         self.kolejkaOdt = []
@@ -56,6 +67,7 @@ class Window(QMainWindow):
         self.wyswietlono = 0
         self.czasTrwania = 0
         self.timer = QTimer(self)
+        self.worker = QThread()
         self.Instance = vlc.Instance('--no-video')
         self.odtwarzacz = self.Instance.media_player_new()
 
@@ -69,24 +81,38 @@ class Window(QMainWindow):
         self.themeCh = QComboBox()
         self.themeCh.addItems(self.themeChList)
         self.themeCh.currentIndexChanged.connect(self._changeTheme)
-        self.poleWysz = QLineEdit()
-        self.poleWysz.setPlaceholderText("Podaj tytuł filmu/utworu do wyszukania")
+        self.poleWysz = QComboBox()
+        self.poleWysz.setEditable(True)
+        self.poleWysz.setPlaceholderText(
+            "Podaj tytuł filmu/utworu do wyszukania")
+
+        if os.path.isfile(self.tempKat):
+            historia = []
+            with open(self.tempKat, 'r') as f:
+                historia = f.read().splitlines()
+            for f in historia:
+                if not f == '':
+                    self.poleWysz.addItem(f)
+
         self.przyciskWysz = QPushButton("Szukaj")
-        self.przyciskWysz.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
+        self.przyciskWysz.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogContentsView))
         self.przyciskWysz.clicked.connect(self._getVideo)
         self.obszarWysz = QHBoxLayout()
         self.obszarWysz.addWidget(self.themeCh)
         self.obszarWysz.addWidget(self.poleWysz)
         self.obszarWysz.addWidget(self.przyciskWysz)
         self.obszarGl.addLayout(self.obszarWysz)
-
+        self.obszarGl.setAlignment(self.obszarWysz, Qt.AlignTop)
         self.stronaWynikow = QLabel()
         self.stronaWynikow.setText(str(self.zmienna+1))
         self.stronaWynikow.setAlignment(QtCore.Qt.AlignCenter)
         self.stronaWLewo = QPushButton()
-        self.stronaWLewo.setIcon(self.style().standardIcon(QStyle.SP_ArrowLeft))
+        self.stronaWLewo.setIcon(
+            self.style().standardIcon(QStyle.SP_ArrowLeft))
         self.stronaWPrawo = QPushButton()
-        self.stronaWPrawo.setIcon(self.style().standardIcon(QStyle.SP_ArrowRight))
+        self.stronaWPrawo.setIcon(
+            self.style().standardIcon(QStyle.SP_ArrowRight))
         self.stronaWPrawo.clicked.connect(self._increase)
         self.stronaWLewo.clicked.connect(self._decrease)
         self.stronaWysz = QHBoxLayout()
@@ -95,26 +121,29 @@ class Window(QMainWindow):
         self.stronaWysz.addWidget(self.stronaWPrawo)
 
         self.progresPob = QLabel()
-        self.progresPob.setText("Nic nie jest pobierane...")
+        self.progresPob.setText("Nic nie jest pobierane.")
         self.progresPob.setAlignment(QtCore.Qt.AlignCenter)
 
         self.terazOdt = QLabel()
-        self.terazOdt.setText("Nic nie jest odtwarzane...")
+        self.terazOdt.setText("Nic nie jest odtwarzane.")
         self.terazOdt.setAlignment(QtCore.Qt.AlignCenter)
 
         self.rozmiarKolejki = QLabel()
-        self.rozmiarKolejki.setText("Kolejka jest pusta...")
+        self.rozmiarKolejki.setText("Kolejka jest pusta.")
         self.rozmiarKolejki.setAlignment(QtCore.Qt.AlignCenter)
 
         self.kontrolkiOdt = QLabel("Kontrolki do odtwarzacza")
         self.kontrolkiOdt.setAlignment(QtCore.Qt.AlignCenter)
 
         self.przyciskPauzy = QPushButton("Pauza")
-        self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.przyciskPauzy.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaPause))
         self.przyciskZatrzymania = QPushButton("Zatrzymaj")
-        self.przyciskZatrzymania.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.przyciskZatrzymania.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaStop))
         self.przyciskDzwieku = QPushButton("Wycisz")
-        self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+        self.przyciskDzwieku.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaVolume))
         self.wartoscDzwieku = QLabel()
         self.wartoscDzwieku.setText("100")
         self.wartoscDzwieku.setFixedWidth(30)
@@ -138,7 +167,8 @@ class Window(QMainWindow):
         self.wartoscProgresu = QLabel("0/0")
         self.wartoscProgresu.setFixedWidth(80)
         self.przyciskPominiecia = QPushButton("Pomiń")
-        self.przyciskPominiecia.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        self.przyciskPominiecia.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaSkipForward))
         self.przyciskPominiecia.setFixedWidth(90)
         self.obszarProgresu = QHBoxLayout()
         self.obszarProgresu.addWidget(self.pasekProgresu)
@@ -153,110 +183,158 @@ class Window(QMainWindow):
         self.obrazDNr1 = QLabel()
         self.obrazDNr1.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp1 = QPushButton("MP3")
-        self.pobierzMp1.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp1.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv1 = QPushButton("MP4")
-        self.pobierzMv1.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv1.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtworz1 = QPushButton("Odt")
         self.odtworz1.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb1 = QPushButton("YT")
-        self.odtworzWeb1.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb1.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         self.obrazNr2 = QImage()
         self.obrazDNr2 = QLabel()
         self.obrazDNr2.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp2 = QPushButton("MP3")
-        self.pobierzMp2.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp2.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv2 = QPushButton("MP4")
-        self.pobierzMv2.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv2.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtworz2 = QPushButton("Odt")
         self.odtworz2.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb2 = QPushButton("YT")
-        self.odtworzWeb2.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb2.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         self.obrazNr3 = QImage()
         self.obrazDNr3 = QLabel()
         self.obrazDNr3.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp3 = QPushButton("MP3")
-        self.pobierzMp3.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp3.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv3 = QPushButton("MP4")
-        self.pobierzMv3.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv3.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtworz3 = QPushButton("Odt")
         self.odtworz3.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb3 = QPushButton("YT")
-        self.odtworzWeb3.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb3.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         self.obrazNr4 = QImage()
         self.obrazDNr4 = QLabel()
         self.obrazDNr4.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp4 = QPushButton("MP3")
-        self.pobierzMp4.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp4.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv4 = QPushButton("MP4")
-        self.pobierzMv4.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv4.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtowrz4 = QPushButton("Odt")
         self.odtowrz4.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb4 = QPushButton("YT")
-        self.odtworzWeb4.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb4.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         self.obrazNr5 = QImage()
         self.obrazDNr5 = QLabel()
         self.obrazDNr5.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp5 = QPushButton("MP3")
-        self.pobierzMp5.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp5.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv5 = QPushButton("MP4")
-        self.pobierzMv5.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv5.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtworz5 = QPushButton("Odt")
         self.odtworz5.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb5 = QPushButton("YT")
-        self.odtworzWeb5.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb5.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
         self.obrazNr6 = QImage()
         self.obrazDNr6 = QLabel()
         self.obrazDNr6.setAlignment(QtCore.Qt.AlignCenter)
         self.pobierzMp6 = QPushButton("MP3")
-        self.pobierzMp6.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMp6.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.pobierzMv6 = QPushButton("MP4")
-        self.pobierzMv6.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.pobierzMv6.setIcon(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton))
         self.odtworz6 = QPushButton("Odt")
         self.odtworz6.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.odtworzWeb6 = QPushButton("YT")
-        self.odtworzWeb6.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
+        self.odtworzWeb6.setIcon(
+            self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
 # <--------------------------------------------------------------------------->
 
-        self.pobierzMp1.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+0]))
-        self.pobierzMv1.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+0]))
+        self.pobierzMp1.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+0],
+                             self.title[(self.zmienna*6)+0]))
+        self.pobierzMv1.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+0],
+                             self.title[(self.zmienna*6)+0]))
         self.odtworz1.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+0], self.title[(self.zmienna*6)+0],
+            lambda: self._pl(self.ident[(self.zmienna*6)+0],
+                             self.title[(self.zmienna*6)+0],
                              self.time[(self.zmienna*6)+0]))
 
-        self.pobierzMp2.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+1]))
-        self.pobierzMv2.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+1]))
+        self.pobierzMp2.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+1],
+                             self.title[(self.zmienna*6)+1]))
+        self.pobierzMv2.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+1],
+                             self.title[(self.zmienna*6)+1]))
         self.odtworz2.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+1], self.title[(self.zmienna*6)+1],
+            lambda: self._pl(self.ident[(self.zmienna*6)+1],
+                             self.title[(self.zmienna*6)+1],
                              self.time[(self.zmienna*6)+1]))
 
-        self.pobierzMp3.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+2]))
-        self.pobierzMv3.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+2]))
+        self.pobierzMp3.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+2],
+                             self.title[(self.zmienna*6)+2]))
+        self.pobierzMv3.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+2],
+                             self.title[(self.zmienna*6)+2]))
         self.odtworz3.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+2], self.title[(self.zmienna*6)+2],
+            lambda: self._pl(self.ident[(self.zmienna*6)+2],
+                             self.title[(self.zmienna*6)+2],
                              self.time[(self.zmienna*6)+2]))
 
-        self.pobierzMp4.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+3]))
-        self.pobierzMv1.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+3]))
+        self.pobierzMp4.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+3],
+                             self.title[(self.zmienna*6)+3]))
+        self.pobierzMv1.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+3],
+                             self.title[(self.zmienna*6)+3]))
         self.odtowrz4.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+3], self.title[(self.zmienna*6)+3],
+            lambda: self._pl(self.ident[(self.zmienna*6)+3],
+                             self.title[(self.zmienna*6)+3],
                              self.time[(self.zmienna*6)+3]))
 
-        self.pobierzMp5.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+4]))
-        self.pobierzMv5.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+4]))
+        self.pobierzMp5.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+4],
+                             self.title[(self.zmienna*6)+4]))
+        self.pobierzMv5.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+4],
+                             self.title[(self.zmienna*6)+4]))
         self.odtworz5.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+4], self.title[(self.zmienna*6)+4],
+            lambda: self._pl(self.ident[(self.zmienna*6)+4],
+                             self.title[(self.zmienna*6)+4],
                              self.time[(self.zmienna*6)+4]))
 
-        self.pobierzMp6.clicked.connect(lambda: self._do(self.ident[(self.zmienna*6)+5]))
-        self.pobierzMv6.clicked.connect(lambda: self._dv(self.ident[(self.zmienna*6)+5]))
+        self.pobierzMp6.clicked.connect(
+            lambda: self._do(self.ident[(self.zmienna*6)+5],
+                             self.title[(self.zmienna*6)+5]))
+        self.pobierzMv6.clicked.connect(
+            lambda: self._dv(self.ident[(self.zmienna*6)+5],
+                             self.title[(self.zmienna*6)+5]))
         self.odtworz6.clicked.connect(
-            lambda: self._pl(self.ident[(self.zmienna*6)+5], self.title[(self.zmienna*6)+5],
+            lambda: self._pl(self.ident[(self.zmienna*6)+5],
+                             self.title[(self.zmienna*6)+5],
                              self.time[(self.zmienna*6)+5]))
 
 # <--------------------------------------------------------------------------->
@@ -329,15 +407,21 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _getVideo(self):
-        if self.poleWysz.text() == '':
+        if self.poleWysz.currentText() == '':
             self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
+        else:
+            if self.poleWysz.findText(self.poleWysz.currentText()) == -1:
+                self.poleWysz.addItem(self.poleWysz.currentText())
+                with open(self.tempKat, 'w') as f:
+                    for i in range(0, self.poleWysz.count()+1):
+                        f.write('%s\n' % self.poleWysz.itemText(i))
 
         self.ident = []
         self.time = []
         self.title = []
         self.mylist = []
         self.channel = []
-        self.wynikiWysz = YoutubeSearch("'" + self.poleWysz.text() + "'",
+        self.wynikiWysz = YoutubeSearch("'" + self.poleWysz.currentText() + "'",
                                      max_results=60).to_dict()
 
         for v in self.wynikiWysz:
@@ -356,7 +440,6 @@ class Window(QMainWindow):
 
     def _updateUi(self):
         if self.wyswietlono == 0:
-            self.setFixedHeight(800)
             self.obszarGl.addLayout(self.obszarWideo)
             self.obszarGl.addLayout(self.stronaWysz)
             self.obszarGl.addWidget(self.progresPob)
@@ -376,17 +459,23 @@ class Window(QMainWindow):
             self.timer.start(100)
 
             self.odtworzWeb1.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+0]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+0]))
             self.odtworzWeb2.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+1]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+1]))
             self.odtworzWeb3.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+2]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+2]))
             self.odtworzWeb4.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+3]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+3]))
             self.odtworzWeb5.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+4]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+4]))
             self.odtworzWeb6.clicked.connect(lambda: webbrowser.open(
-                "https://www.youtube.com/watch?v=" + self.ident[(self.zmienna*6)+5]))
+                "https://www.youtube.com/watch?v="
+                + self.ident[(self.zmienna*6)+5]))
 
         self.wyswietlono = 1
 
@@ -425,29 +514,68 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
         self.obrazDNr1.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+0]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+0])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+0]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+0])
         self.obrazDNr2.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+1]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+1])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+1]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+1])
         self.obrazDNr3.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+2]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+2])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+2]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+2])
         self.obrazDNr4.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+3]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+3])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+3]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+3])
         self.obrazDNr5.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+4]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+4])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+4]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+4])
         self.obrazDNr6.setToolTip("Tytuł: " + self.title[(self.zmienna*6)+5]
-                              + "\nKanał: " + self.channel[(self.zmienna*6)+5])
+            + "\nKanał: " + self.channel[(self.zmienna*6)+5]
+            + "\nCzas Trwania: " + self.time[(self.zmienna*6)+5])
 
 # <--------------------------------------------------------------------------->
 
-    def _do(self, id):
-        self.worker = Dv._DownloadMP3(id, self.sciezkaPob, self.progresPob)
-        self.worker.start()
-        self.worker.quit()
+    def _do(self, id, title):
+        if self.worker.isRunning() == False:
+            self.worker = Dv._DownloadMP3(id, self.sciezkaPob, self.progresPob)
+            self.worker.start()
+            self.worker.quit()
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("W tym momencie pobierany jest inny plik.")
+            msg.setInformativeText("W tym momencie jest uruchomione pobieranie"
+                + " innego pliku w tle. Proszę poczekać, aż plik zostanie"
+                + " pobrany albo zatrzymać pobieranie i spróbować ponownie.")
+            msg.setWindowTitle("Błąd w pobieraniu")
+            msg.setDetailedText(title)
+            msg.addButton(QMessageBox.Ok)
+            zatrzymaj = msg.addButton('Zatrzymaj', QMessageBox.YesRole)
+            zatrzymaj.clicked.connect(self._stopWorker)
+            msg.exec()
 
-    def _dv(self, id):
-        self.worker = Dv._DownloadMP4(id, self.sciezkaPob, self.progresPob)
-        self.worker.start()
-        self.worker.quit()
+
+    def _dv(self, id, title):
+        if self.worker.isRunning() == False:
+            self.worker = Dv._DownloadMP4(id, self.sciezkaPob, self.progresPob)
+            self.worker.start()
+            self.worker.quit()
+        else:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("W tym momencie pobierany jest inny plik.")
+            msg.setInformativeText("W tym momencie jest uruchomione pobieranie"
+                + " innego pliku w tle. Proszę poczekać, aż plik zostanie"
+                + " pobrany albo zatrzymać pobieranie i spróbować ponownie.")
+            msg.setWindowTitle("Błąd w pobieraniu")
+            msg.setDetailedText(title)
+            msg.addButton(QMessageBox.Ok)
+            zatrzymaj = msg.addButton('Zatrzymaj', QMessageBox.YesRole)
+            zatrzymaj.clicked.connect(self._stopWorker)
+            msg.exec()
+
+    def _stopWorker(self):
+        self.worker.terminate()
+        self.progresPob.setText("Pobieranie zatrzymane.")
 
 # <--------------------------------------------------------------------------->
 
@@ -466,11 +594,15 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _pl(self, id, title, time):
+        """Play.Play(self.odtwarzacz, self.kolejkaOdt, self.rozmiarKolejki,
+                 self.czasTrwania, self.terazOdt, self.Instance,
+                 self.pasekProgresu, id, title, time, self.czyPom)"""
         if self.odtwarzacz.is_playing() and self.czyPom == 0:
             self.kolejkaOdt.append(id)
             self.kolejkaOdt.append(title)
             self.kolejkaOdt.append(time)
-            self.rozmiarKolejki.setText("W kolejce: " + str(int(len(self.kolejkaOdt)/3)))
+            self.rozmiarKolejki.setText("W kolejce: "
+                + str(int(len(self.kolejkaOdt)/3)))
         else:
             self.czasTrwania = time
             self.terazOdt.setText("Teraz odtwarzane: " + title)
@@ -487,38 +619,34 @@ class Window(QMainWindow):
 
     def _pause(self):
         self.odtwarzacz.pause()
-        """if self.odtwarzacz.get_pause() == 1:
-            self.odtwarzacz.set_pause(0)
-            self.przyciskPauzy.setText("Pause")
-            self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
-        else:
-            self.odtwarzacz.set_pause(1)
-            self.przyciskPauzy.setText("Unpause")
-            self.przyciskPauzy.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))"""
 
     def _mute(self):
         if self.odtwarzacz.audio_get_mute():
             self.odtwarzacz.audio_set_mute(False)
             self.przyciskDzwieku.setText("Wycisz")
-            self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+            self.przyciskDzwieku.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaVolume))
         else:
             self.odtwarzacz.audio_set_mute(True)
             self.przyciskDzwieku.setText("Odcisz")
-            self.przyciskDzwieku.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+            self.przyciskDzwieku.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
 
 
     def _stop(self):
         self.odtwarzacz.stop()
-        self.terazOdt.setText("Nic nie jest odtwarzane...")
+        self.terazOdt.setText("Nic nie jest odtwarzane.")
         self.pasekProgresu.setValue(0)
 
     def _skip(self):
         if len(self.kolejkaOdt) > 0:
             self.czyPom = 1
-            self._pl(self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(0))
+            self._pl(self.kolejkaOdt.pop(0),
+                     self.kolejkaOdt.pop(0),
+                     self.kolejkaOdt.pop(0))
             self.czyPom = 0
             if len(self.kolejkaOdt) <= 0:
-                self.rozmiarKolejki.setText("Kolejka jest pusta...")
+                self.rozmiarKolejki.setText("Kolejka jest pusta.")
             else:
                 self.rozmiarKolejki.setText("W kolejce: "
                                       + str(int(len(self.kolejkaOdt)/3)))
@@ -533,18 +661,21 @@ class Window(QMainWindow):
     def _music(self):
         self.pasekProgresu.setValue(int(self.odtwarzacz.get_position()*1000))
         self.wartoscProgresu.setText(
-            time.strftime('%M:%S', time.gmtime(self.odtwarzacz.get_time()/1000))
-            + "/" + str(self.czasTrwania))
+            time.strftime('%M:%S', time.gmtime(
+                self.odtwarzacz.get_time()/1000))
+                + "/" + str(self.czasTrwania))
         if self.powtarzanieUtworu.checkState() != 0:
             if self.odtwarzacz.get_position()*100 >= 99:
                 self.odtwarzacz.set_position(0)
         else:
             if self.odtwarzacz.is_playing() == 0:
-                if len(self.kolejkaOdt) > 0 and self.odtwarzacz.get_position()*100 > 90:
-                    self._pl(self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(
-                        0), self.kolejkaOdt.pop(0))
-                    if len(self.kolejkaOdt) <= 0:
-                        self.rozmiarKolejki.setText("Kolejka jest pusta...")
+                if len(self.kolejkaOdt) > 0:
+                    if self.odtwarzacz.get_position()*100 > 90:
+                        self._pl(self.kolejkaOdt.pop(0),
+                                 self.kolejkaOdt.pop(0),
+                                 self.kolejkaOdt.pop(0))
+                        if len(self.kolejkaOdt) <= 0:
+                            self.rozmiarKolejki.setText("Kolejka jest pusta.")
 
 # <--------------------------------------------------------------------------->
 
