@@ -40,7 +40,6 @@ class oknoHistorii(QWidget):
         self.tekst = QLabel("Wybierz, który rekord usunąć\n(aby zmiany zostały"
             + " wprowadzone, potrzebne jest ponowne uruhcominie programu):")
         self.rekord = QComboBox()
-        self.rekord.setEditable(True)
 
         self.polePrzy = QHBoxLayout()
         self.usun = QPushButton("Usuń")
