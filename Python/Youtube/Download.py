@@ -4,6 +4,8 @@ import platform
 from PyQt5 import QtCore
 from PyQt5.QtCore import QThread
 
+# Klasy i funkcje wykorzystywane do pobierania filmów/utworów.
+
 
 class _DownloadMP3(QThread):
     notifyProgress = QtCore.pyqtSignal(int)
