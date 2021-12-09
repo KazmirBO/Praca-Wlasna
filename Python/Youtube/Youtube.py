@@ -25,57 +25,11 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QLineEdit, QSlider,
 
 import Download as Dv
 import Play
+import History
 
 
-__version__ = 'v0.2.6 - "Improve history"'
+__version__ = 'v0.2.7 - "Improve code and history"'
 __author__ = 'Sebastian Kolanowski'
-
-
-class oknoHistorii(QWidget):
-    def __init__(self, history, tempKat):
-        super().__init__()
-        self.history = history
-        self.tempKat = tempKat
-        self.layout = QVBoxLayout()
-        self.tekst = QLabel("Wybierz, który rekord usunąć\n(aby zmiany zostały"
-            + " wprowadzone, potrzebne jest ponowne uruhcominie programu):")
-        self.rekord = QComboBox()
-
-        self.polePrzy = QHBoxLayout()
-        self.usun = QPushButton("Usuń")
-        self.usun.clicked.connect(self._usun)
-        self.exit = QPushButton("Wyjdź")
-        self.exit.clicked.connect(lambda: self.close())
-        self.polePrzy.addWidget(self.usun)
-        self.polePrzy.addWidget(self.exit)
-
-        if os.path.isfile(self.tempKat):
-            historia = []
-            with open(self.tempKat, 'r') as f:
-                historia = f.read().splitlines()
-            f.close()
-            for f in historia:
-                if not f == '':
-                    self.rekord.addItem(f)
-
-        self.layout.addWidget(self.tekst)
-        self.layout.addWidget(self.rekord)
-        self.layout.addLayout(self.polePrzy)
-        self.setLayout(self.layout)
-
-    def _usun(self):
-        f = open(self.tempKat, 'r')
-        lst = []
-        for line in f:
-            if self.rekord.currentText() in line:
-                line = line.replace(self.rekord.currentText() ,'')
-            lst.append(line)
-        f.close()
-        f = open(self.tempKat, 'w')
-        for line in lst:
-            f.write(line)
-        f.close()
-        self.rekord.removeItem(self.rekord.findData(self.rekord.currentText()))
 
 
 class Window(QMainWindow):
@@ -147,14 +101,10 @@ class Window(QMainWindow):
             self.style().standardIcon(QStyle.SP_FileDialogContentsView))
         self.przyciskWysz.clicked.connect(self._getVideo)
 
-        self.historiaPrzy = QPushButton("Historia")
-        self.historiaPrzy.clicked.connect(self._showHistory)
-
         self.obszarWysz = QHBoxLayout()
         self.obszarWysz.addWidget(self.themeCh)
         self.obszarWysz.addWidget(self.poleWysz)
         self.obszarWysz.addWidget(self.przyciskWysz)
-        self.obszarWysz.addWidget(self.historiaPrzy)
         self.obszarGl.addLayout(self.obszarWysz)
         self.obszarGl.setAlignment(self.obszarWysz, Qt.AlignTop)
         self.stronaWynikow = QLabel()
@@ -475,8 +425,8 @@ class Window(QMainWindow):
         self.title = []
         self.mylist = []
         self.channel = []
-        self.wynikiWysz = YoutubeSearch("'" + self.poleWysz.currentText() + "'",
-                                     max_results=60).to_dict()
+        self.wynikiWysz = YoutubeSearch(
+            "'" + self.poleWysz.currentText() + "'", max_results=60).to_dict()
 
         for v in self.wynikiWysz:
             self.ident.append(v['id'])
@@ -672,7 +622,7 @@ class Window(QMainWindow):
 # <--------------------------------------------------------------------------->
 
     def _showHistory(self):
-        self.w = oknoHistorii(self.poleWysz, self.tempKat)
+        self.w = History.oknoHistorii(self.poleWysz, self.tempKat)
         self.w.show()
 
 # <--------------------------------------------------------------------------->
@@ -745,6 +695,8 @@ class Window(QMainWindow):
     def _createMenu(self):
         menu = self.menuBar().addMenu('Menu')
         menu.addAction('Wyłącz', self.close)
+        historia = self.menuBar().addMenu('Historia')
+        historia.addAction('Pokaż', self._showHistory)
 
     def _createStatusBar(self):
         status = QStatusBar()
