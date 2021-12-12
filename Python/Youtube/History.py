@@ -36,8 +36,9 @@ class oknoHistorii(QWidget):
             f = open(self.tempKat, 'r')
             lst = []
             for line in f:
-                if self.rekord.currentText() in line:
-                    line = line.replace(self.rekord.currentText() ,'')
+                print(self.rekord.currentText() + " " + line)
+                if str(self.rekord.currentText()) + "\n" in line:
+                    line = line.replace(self.rekord.currentText(), '')
                 lst.append(line)
             f.close()
             f = open(self.tempKat, 'w')
@@ -45,7 +46,8 @@ class oknoHistorii(QWidget):
                 f.write(line)
             f.close()
             self.rekord.removeItem(self.rekord.findData(
-                self.rekord.currentText()))
+                self.rekord.currentText())
+            )
 
             self.history.clear()
             self.rekord.clear()
