@@ -1,6 +1,6 @@
 import pafy
 from PyQt5 import QtCore
-from PyQt5.QtCore import QObject
+
 
 class Play():
     notifyProgress = QtCore.pyqtSignal(int)
@@ -28,7 +28,7 @@ class Play():
             self.kolejkaOdt.append(self.title)
             self.kolejkaOdt.append(self.time)
             self.rozmiarKolejki.setText("W kolejce: "
-                + str(int(len(self.kolejkaOdt)/3)))
+                                        + str(int(len(self.kolejkaOdt)/3)))
         else:
             self.czasTrwania = self.time
             self.terazOdt.setText("Teraz odtwarzane: " + self.title)
