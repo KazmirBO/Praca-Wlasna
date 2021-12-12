@@ -36,7 +36,6 @@ class oknoHistorii(QWidget):
             f = open(self.tempKat, 'r')
             lst = []
             for line in f:
-                print(self.rekord.currentText() + " " + line)
                 if str(self.rekord.currentText()) + "\n" in line:
                     line = line.replace(self.rekord.currentText(), '')
                 lst.append(line)
