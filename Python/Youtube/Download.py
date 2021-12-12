@@ -1,5 +1,4 @@
 import youtube_dl
-import os
 import platform
 from PyQt5 import QtCore
 from PyQt5.QtCore import QThread
