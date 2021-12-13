@@ -1,10 +1,7 @@
 import pafy
-from PyQt5 import QtCore
 
 
 class Play():
-    notifyProgress = QtCore.pyqtSignal(int)
-
     def __init__(self, odtwarzacz, kolejkaOdt, rozmiarKolejki, czasTrwania,
                  terazOdt, Instance, pasekProgresu, id, title, time, czyPom,
                  parent=None):
