@@ -26,10 +26,11 @@ from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QSlider, QPushButton,
 
 import Download as Dv
 # import Play
-import History
+import HistoryS
+import HistoryO
 
 
-__version__ = 'v0.3.1 - "Code optimize"'
+__version__ = 'v0.3.2 - "Code optimize"'
 __author__ = "Sebastian Kolanowski"
 
 
@@ -52,7 +53,6 @@ class Window(QMainWindow):
         self.czyPauza = False
         self.wyswietlono = False
         self.czasTrwania = 0
-        self.rozmiarCz = 12
         self.timer = QTimer(self)
         self.worker = QThread()
         self.Instance = vlc.Instance("--no-video")
@@ -60,20 +60,23 @@ class Window(QMainWindow):
 
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
 
-        self.tempKat = tempfile.gettempdir()
+        self.tempWysz = tempfile.gettempdir()
+        self.tempHis = tempfile.gettempdir()
 
         self.platforma = platform.system()
         self.sciezkaPob = str(Path.home() / "Downloads")
         if self.platforma == "Windows":
             self.setWindowIcon(QIcon(".\\Icons\\Youtube.png"))
             self.sciezkaPob += "\\"
-            self.tempKat += "\\YTHistory.txt"
-            self.setFont(QFont("Calibri", self.rozmiarCz))
+            self.tempWysz += "\\YTHistory.txt"
+            self.tempHis += "\\YTVideo.txt"
+            self.setFont(QFont("Calibri", 12))
         else:
             self.setWindowIcon(QIcon("./Icons/Youtube.png"))
             self.sciezkaPob += "/"
-            self.tempKat += "/YTHistory.txt"
-            self.setFont(QFont("PatrickHand", self.rozmiarCz))
+            self.tempWysz += "/YTHistory.txt"
+            self.tempHis += "/YTVideo.txt"
+            self.setFont(QFont("PatrickHand", 12))
 
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
 
@@ -84,19 +87,13 @@ class Window(QMainWindow):
     def _createUi(self):
         self.obszarGl = QVBoxLayout()
 
-        self.themeCh = QComboBox()
-        self.themeCh.addItems(self.themeChList)
-        self.themeCh.currentIndexChanged.connect(
-            lambda: app.setStyle(self.themeCh.currentText())
-        )
         self.poleWysz = QComboBox()
         self.poleWysz.setEditable(True)
         self.poleWysz.setPlaceholderText(
             "Podaj tytuł filmu/utworu do wyszukania")
-
-        if os.path.isfile(self.tempKat):
+        if os.path.isfile(self.tempWysz):
             historia = []
-            with open(self.tempKat, "r") as f:
+            with open(self.tempWysz, "r") as f:
                 historia = f.read().splitlines()
             f.close()
             for f in historia:
@@ -110,24 +107,28 @@ class Window(QMainWindow):
         self.przyciskWysz.clicked.connect(self._getVideo)
 
         self.obszarWysz = QHBoxLayout()
-        self.obszarWysz.addWidget(self.themeCh)
         self.obszarWysz.addWidget(self.poleWysz)
         self.obszarWysz.addWidget(self.przyciskWysz)
+
         self.obszarGl.addLayout(self.obszarWysz)
         self.obszarGl.setAlignment(self.obszarWysz, Qt.AlignTop)
+
         self.stronaWynikow = QLabel()
         self.stronaWynikow.setText(str(self.zmienna + 1))
         self.stronaWynikow.setAlignment(QtCore.Qt.AlignCenter)
+
         self.stronaWLewo = QPushButton()
         self.stronaWLewo.setIcon(
             self.style().standardIcon(QStyle.SP_ArrowLeft)
         )
+        self.stronaWLewo.clicked.connect(self._decrease)
+
         self.stronaWPrawo = QPushButton()
         self.stronaWPrawo.setIcon(
             self.style().standardIcon(QStyle.SP_ArrowRight)
         )
         self.stronaWPrawo.clicked.connect(self._increase)
-        self.stronaWLewo.clicked.connect(self._decrease)
+
         self.stronaWysz = QHBoxLayout()
         self.stronaWysz.addWidget(self.stronaWLewo)
         self.stronaWysz.addWidget(self.stronaWynikow)
@@ -145,27 +146,30 @@ class Window(QMainWindow):
         self.rozmiarKolejki.setText("Kolejka jest pusta.")
         self.rozmiarKolejki.setAlignment(QtCore.Qt.AlignCenter)
 
-        self.kontrolkiOdt = QLabel("Kontrolki do odtwarzacza")
-        self.kontrolkiOdt.setAlignment(QtCore.Qt.AlignCenter)
-
         self.przyciskPauzy = QPushButton("Pauza")
         self.przyciskPauzy.setIcon(
             self.style().standardIcon(QStyle.SP_MediaPause)
         )
+
         self.przyciskZatrzymania = QPushButton("Zatrzymaj")
         self.przyciskZatrzymania.setIcon(
             self.style().standardIcon(QStyle.SP_MediaStop)
         )
+
         self.przyciskDzwieku = QPushButton("Wycisz")
         self.przyciskDzwieku.setIcon(
             self.style().standardIcon(QStyle.SP_MediaVolume)
         )
+
         self.wartoscDzwieku = QLabel()
         self.wartoscDzwieku.setText("100")
+
         self.powtarzanieUtworu = QCheckBox("Powtarzaj")
+
         self.poziomGlosu = QSlider(Qt.Horizontal)
         self.poziomGlosu.setValue(100)
         self.poziomGlosu.setMaximum(100)
+
         self.obszarKontrolek = QHBoxLayout()
         self.obszarKontrolek.addWidget(self.przyciskPauzy)
         self.obszarKontrolek.addWidget(self.przyciskZatrzymania)
@@ -182,11 +186,14 @@ class Window(QMainWindow):
                 self.pasekProgresu.value() / 1000
             )
         )
+
         self.wartoscProgresu = QLabel("0/0")
+
         self.przyciskPominiecia = QPushButton("Następny")
         self.przyciskPominiecia.setIcon(
             self.style().standardIcon(QStyle.SP_MediaSkipForward)
         )
+
         self.obszarProgresu = QHBoxLayout()
         self.obszarProgresu.addWidget(self.pasekProgresu)
         self.obszarProgresu.addWidget(self.wartoscProgresu)
@@ -233,7 +240,7 @@ class Window(QMainWindow):
                 QStyle.SP_MediaPlay)
             )
             odtworz.clicked.connect(
-                lambda checked, arg=i: self._pl(
+                lambda checked, arg=i: self._play(
                     self.ident[(self.zmienna * 6) + arg],
                     self.title[(self.zmienna * 6) + arg],
                     self.time[(self.zmienna * 6) + arg]
@@ -305,11 +312,11 @@ class Window(QMainWindow):
 
     def _getVideo(self):
         if self.poleWysz.currentText() == "":
-            self._pl("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
+            self._play("dQw4w9WgXcQ", "Never Gonna Give You Up", "3:33")
         else:
             if self.poleWysz.findText(self.poleWysz.currentText()) == -1:
                 self.poleWysz.addItem(self.poleWysz.currentText())
-                with open(self.tempKat, "w") as f:
+                with open(self.tempWysz, "w") as f:
                     for i in range(0, self.poleWysz.count() + 1):
                         f.write("%s\n" % self.poleWysz.itemText(i))
                 f.close()
@@ -342,14 +349,17 @@ class Window(QMainWindow):
             self.obszarGl.addWidget(self.progresPob)
             self.obszarGl.addWidget(self.terazOdt)
             self.obszarGl.addWidget(self.rozmiarKolejki)
-            self.obszarGl.addWidget(self.kontrolkiOdt)
             self.obszarGl.addLayout(self.obszarProgresu)
             self.obszarGl.addLayout(self.obszarKontrolek)
 
             self.przyciskPauzy.clicked.connect(lambda: self._pause())
+
             self.przyciskZatrzymania.clicked.connect(lambda: self._stop())
+
             self.przyciskDzwieku.clicked.connect(lambda: self._mute())
+
             self.poziomGlosu.valueChanged.connect(self._volume)
+
             self.przyciskPominiecia.clicked.connect(lambda: self._skip())
 
             self.timer.timeout.connect(self._music)
@@ -360,36 +370,42 @@ class Window(QMainWindow):
         self.obrazNr1.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 0]).content
         )
+
         zdj1 = QPixmap(self.obrazNr1)
         self.obrazDNr1.setPixmap(zdj1.scaled(200, 100))
 
         self.obrazNr2.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 1]).content
         )
+
         zdj2 = QPixmap(self.obrazNr2)
         self.obrazDNr2.setPixmap(zdj2.scaled(200, 100))
 
         self.obrazNr3.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 2]).content
         )
+
         zdj3 = QPixmap(self.obrazNr3)
         self.obrazDNr3.setPixmap(zdj3.scaled(200, 100))
 
         self.obrazNr4.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 3]).content
         )
+
         zdj4 = QPixmap(self.obrazNr4)
         self.obrazDNr4.setPixmap(zdj4.scaled(200, 100))
 
         self.obrazNr5.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 4]).content
         )
+
         zdj5 = QPixmap(self.obrazNr5)
         self.obrazDNr5.setPixmap(zdj5.scaled(200, 100))
 
         self.obrazNr6.loadFromData(
             requests.get(self.mylist[(self.zmienna * 6) + 5]).content
         )
+
         zdj6 = QPixmap(self.obrazNr6)
         self.obrazDNr6.setPixmap(zdj6.scaled(200, 100))
 
@@ -401,6 +417,7 @@ class Window(QMainWindow):
             + "\nCzas Trwania: "
             + self.time[(self.zmienna * 6) + 0]
         )
+
         self.obrazDNr2.setToolTip(
             "Tytuł: "
             + self.title[(self.zmienna * 6) + 1]
@@ -409,6 +426,7 @@ class Window(QMainWindow):
             + "\nCzas Trwania: "
             + self.time[(self.zmienna * 6) + 1]
         )
+
         self.obrazDNr3.setToolTip(
             "Tytuł: "
             + self.title[(self.zmienna * 6) + 2]
@@ -417,6 +435,7 @@ class Window(QMainWindow):
             + "\nCzas Trwania: "
             + self.time[(self.zmienna * 6) + 2]
         )
+
         self.obrazDNr4.setToolTip(
             "Tytuł: "
             + self.title[(self.zmienna * 6) + 3]
@@ -425,6 +444,7 @@ class Window(QMainWindow):
             + "\nCzas Trwania: "
             + self.time[(self.zmienna * 6) + 3]
         )
+
         self.obrazDNr5.setToolTip(
             "Tytuł: "
             + self.title[(self.zmienna * 6) + 4]
@@ -433,6 +453,7 @@ class Window(QMainWindow):
             + "\nCzas Trwania: "
             + self.time[(self.zmienna * 6) + 4]
         )
+
         self.obrazDNr6.setToolTip(
             "Tytuł: "
             + self.title[(self.zmienna * 6) + 5]
@@ -500,7 +521,7 @@ class Window(QMainWindow):
             self.stronaWynikow.setText(str(self.zmienna + 1))
             self._updateUi()
 
-    def _pl(self, id, title, time):
+    def _play(self, id, title, time):
         if self.odtwarzacz.is_playing() and not self.czyPom:
             self.kolejkaOdt.append(id)
             self.kolejkaOdt.append(title)
@@ -519,14 +540,22 @@ class Window(QMainWindow):
             self.odtwarzacz.set_media(Media)
             self.odtwarzacz.play()
             self.pasekProgresu.setValue(0)
+            with open(self.tempHis, 'w') as f:
+                f.write(id + "\n")
+                f.write(title + "\n")
+                f.write(time + "\n")
         """
         Play.Play(self.odtwarzacz, self.kolejkaOdt, self.rozmiarKolejki,
                  self.czasTrwania, self.terazOdt, self.Instance,
                  self.pasekProgresu, id, title, time, self.czyPom)
         """
 
-    def _showHistory(self):
-        self.w = History.oknoHistorii(self.poleWysz, self.tempKat)
+    def _showSHistory(self):
+        self.w = HistoryS.oknoHistorii(self.poleWysz, self.tempWysz)
+        self.w.show()
+
+    def _showOHistory(self):
+        self.w = HistoryO.oknoHistorii(self.tempOdt)
         self.w.show()
 
     def _pause(self):
@@ -574,9 +603,10 @@ class Window(QMainWindow):
     def _skip(self):
         if len(self.kolejkaOdt) > 0:
             self.czyPom = True
-            self._pl(
-                self.kolejkaOdt.pop(0), self.kolejkaOdt.pop(
-                    0), self.kolejkaOdt.pop(0)
+            self._play(
+                self.kolejkaOdt.pop(0),
+                self.kolejkaOdt.pop(0),
+                self.kolejkaOdt.pop(0)
             )
             self.czyPom = False
             if len(self.kolejkaOdt) <= 0:
@@ -607,7 +637,7 @@ class Window(QMainWindow):
             if self.odtwarzacz.is_playing() == 0:
                 if len(self.kolejkaOdt) > 0:
                     if self.odtwarzacz.get_position() * 100 >= 99:
-                        self._pl(
+                        self._play(
                             self.kolejkaOdt.pop(0),
                             self.kolejkaOdt.pop(0),
                             self.kolejkaOdt.pop(0),
@@ -624,9 +654,13 @@ class Window(QMainWindow):
     def _createMenu(self):
         menu = self.menuBar().addMenu("Menu")
         menu.addAction("Czcionka", self._selectFont)
+        theme = menu.addMenu("Motywy")
+        for i in self.themeChList:
+            theme.addAction(i, lambda arg=i: app.setStyle(arg))
         menu.addAction("Wyłącz", self.close)
         historia = self.menuBar().addMenu("Historia")
-        historia.addAction("Pokaż", self._showHistory)
+        historia.addAction("Wyszukiwania", self._showSHistory)
+        historia.addAction("Odtwarzania", self._showOHistory)
 
     def _createStatusBar(self):
         status = QStatusBar()
