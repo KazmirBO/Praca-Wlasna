@@ -15,14 +15,26 @@ import tempfile
 from pathlib import Path
 from youtube_search import YoutubeSearch
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QTimer, QThread
-from PyQt5.QtGui import QFont, QImage, QPixmap, QIcon
-from PyQt5.QtWidgets import (QHBoxLayout, QVBoxLayout, QSlider, QPushButton,
-                             QLabel, QWidget, QMainWindow, QStatusBar, QStyle,
-                             QApplication, QGridLayout, QCheckBox,
-                             QStyleFactory, QComboBox, QMessageBox,
-                             QFontDialog
-                             )
+from PyQt5.QtCore import (Qt, QTimer, QThread)
+from PyQt5.QtGui import (QFont, QImage, QPixmap, QIcon)
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QHBoxLayout,
+    QVBoxLayout,
+    QGridLayout,
+    QPushButton,
+    QCheckBox,
+    QComboBox,
+    QWidget,
+    QLabel,
+    QSlider,
+    QStatusBar,
+    QStyle,
+    QMessageBox,
+    QStyleFactory,
+    QFontDialog
+)
 
 import Download as Dv
 # import Play
@@ -30,7 +42,7 @@ import HistoryS
 import HistoryO
 
 
-__version__ = 'v0.3.2 - "Code optimize"'
+__version__ = 'v0.3.3 - "Code optimize"'
 __author__ = "Sebastian Kolanowski"
 
 
@@ -61,7 +73,7 @@ class Window(QMainWindow):
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
 
         self.tempWysz = tempfile.gettempdir()
-        self.tempHis = tempfile.gettempdir()
+        self.tempOdt = tempfile.gettempdir()
 
         self.platforma = platform.system()
         self.sciezkaPob = str(Path.home() / "Downloads")
@@ -69,13 +81,13 @@ class Window(QMainWindow):
             self.setWindowIcon(QIcon(".\\Icons\\Youtube.png"))
             self.sciezkaPob += "\\"
             self.tempWysz += "\\YTHistory.txt"
-            self.tempHis += "\\YTVideo.txt"
+            self.tempOdt += "\\YTVideo.txt"
             self.setFont(QFont("Calibri", 12))
         else:
             self.setWindowIcon(QIcon("./Icons/Youtube.png"))
             self.sciezkaPob += "/"
             self.tempWysz += "/YTHistory.txt"
-            self.tempHis += "/YTVideo.txt"
+            self.tempOdt += "/YTVideo.txt"
             self.setFont(QFont("PatrickHand", 12))
 
         # <===> PLATFORMA/SYSTEM OPERACYJNY <===>
@@ -216,7 +228,7 @@ class Window(QMainWindow):
                 QStyle.SP_DialogSaveButton)
             )
             pobierzMp.clicked.connect(
-                lambda checked, arg=i: self._do(
+                lambda checked, arg=i: self._downloadAudio(
                     self.ident[(self.zmienna * 6) + arg],
                     self.title[(self.zmienna * 6) + arg]
                     )
@@ -228,7 +240,7 @@ class Window(QMainWindow):
                 QStyle.SP_DialogSaveButton)
             )
             pobierzMv.clicked.connect(
-                lambda checked, arg=i: self._dv(
+                lambda checked, arg=i: self._downloadVideo(
                     self.ident[(self.zmienna * 6) + arg],
                     self.title[(self.zmienna * 6) + arg]
                 )
@@ -463,7 +475,7 @@ class Window(QMainWindow):
             + self.time[(self.zmienna * 6) + 5]
         )
 
-    def _do(self, id, title):
+    def _downloadAudio(self, id, title):
         if not self.worker.isRunning():
             self.worker = Dv._DownloadMP3(id, self.sciezkaPob, self.progresPob)
             self.worker.start()
@@ -484,7 +496,7 @@ class Window(QMainWindow):
             zatrzymaj.clicked.connect(self._stopWorker)
             msg.exec()
 
-    def _dv(self, id, title):
+    def _downloadVideo(self, id, title):
         if not self.worker.isRunning():
             self.worker = Dv._DownloadMP4(id, self.sciezkaPob, self.progresPob)
             self.worker.start()
@@ -540,7 +552,11 @@ class Window(QMainWindow):
             self.odtwarzacz.set_media(Media)
             self.odtwarzacz.play()
             self.pasekProgresu.setValue(0)
-            with open(self.tempHis, 'w') as f:
+            with open(self.tempOdt, 'w') as f:
+                f.write(id + "\n")
+                f.write(title + "\n")
+                f.write(time + "\n")
+            with open(self.tempOdt, 'w') as f:
                 f.write(id + "\n")
                 f.write(title + "\n")
                 f.write(time + "\n")
