@@ -50,8 +50,6 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Youtube App")
-        # self.setFixedWidth(700)
-        # self.setFixedHeight(800)
         self.resize(700, 800)
         self.generalLayout = QHBoxLayout()
         self._centralWidget = QWidget(self)
@@ -552,11 +550,7 @@ class Window(QMainWindow):
             self.odtwarzacz.set_media(Media)
             self.odtwarzacz.play()
             self.pasekProgresu.setValue(0)
-            with open(self.tempOdt, 'w') as f:
-                f.write(id + "\n")
-                f.write(title + "\n")
-                f.write(time + "\n")
-            with open(self.tempOdt, 'w') as f:
+            with open(self.tempOdt, 'a') as f:
                 f.write(id + "\n")
                 f.write(title + "\n")
                 f.write(time + "\n")
