@@ -3,8 +3,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QTableWidget,
     QWidget,
-    QLabel,
-    QHBoxLayout,
     QPushButton,
     QTableWidgetItem
 )
@@ -15,6 +13,7 @@ from PyQt5.QtWidgets import (
 class oknoHistorii(QWidget):
     def __init__(self, tempOdt):
         super().__init__()
+        self.setWindowTitle("Historia Odtwarzania")
         self.resize(400, 100)
         self.tempOdt = tempOdt
         self.layout = QVBoxLayout()
