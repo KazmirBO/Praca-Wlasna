@@ -42,14 +42,14 @@ import HistoryS
 import HistoryO
 
 
-__version__ = 'v0.3.3 - "Code optimize"'
+__version__ = 'v0.3.4 - "Hotfix"'
 __author__ = "Sebastian Kolanowski"
 
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Youtube App")
+        self.setWindowTitle("Odtwarzacz Youtube")
         self.resize(700, 800)
         self.generalLayout = QHBoxLayout()
         self._centralWidget = QWidget(self)
