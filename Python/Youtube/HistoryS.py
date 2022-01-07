@@ -8,11 +8,12 @@ from PyQt5.QtWidgets import (QVBoxLayout, QWidget, QLabel, QHBoxLayout,
 class oknoHistorii(QWidget):
     def __init__(self, history, tempKat):
         super().__init__()
+        self.setWindowTitle("Historia Wyszukiwania")
         self.resize(400, 100)
         self.history = history
         self.tempKat = tempKat
         self.layout = QVBoxLayout()
-        self.tekst = QLabel("Wybierz, który rekord usunąć:")
+        self.tekst = QLabel("Wybierz rekord który chcesz usunąć:")
         self.rekord = QComboBox()
 
         self.polePrzy = QHBoxLayout()
