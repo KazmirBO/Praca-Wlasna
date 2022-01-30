@@ -1,4 +1,4 @@
-import youtube_dl
+import yt_dlp
 import platform
 from PyQt5 import QtCore
 from PyQt5.QtCore import QThread
@@ -25,7 +25,7 @@ class _DownloadMP3(QThread):
                         'preferredcodec': 'mp3',
                         'preferredquality': '192',
                         }], }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([self.ident])
 
     def my_hook(self, d):
@@ -55,7 +55,7 @@ class _DownloadMP4(QThread):
         ydl_opts = {'outtmpl': self.sciezka + '%(title)s.%(ext)s',
                     'progress_hooks': [self.my_hook],
                     'format': 'best'}
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([self.ident])
 
     def my_hook(self, d):
