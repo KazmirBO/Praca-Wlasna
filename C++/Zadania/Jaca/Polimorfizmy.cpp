@@ -139,6 +139,7 @@ int main(int argc, char const *argv[]) {
       std::cout << "Wyjscie!" << std::endl;
       break;
     default:
+      std::cout << "Zly wybor!" << std::endl;
       break;
     }
   }
