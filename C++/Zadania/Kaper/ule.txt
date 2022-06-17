@@ -1,0 +1,6 @@
+a;a;seba;3;15170;
+b;b;seba;2;93255;
+c;c;seba;1;66771;
+admin;nwm;admin;10;26434;
+Sawin;Mieszany;Seba;10;53896;
+Sawin;Wielo;Adam;11;82498;
