@@ -4,12 +4,15 @@
 import os
 import sys
 import random
-from PyQt5 import QtCore
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (QApplication, QComboBox, QPushButton, QLineEdit,
-                             QSpinBox, QVBoxLayout, QHBoxLayout, QGridLayout,
-                             QFormLayout, QMainWindow, QStatusBar, QWidget,
-                             QFileDialog, QScrollArea, QMessageBox, QLabel)
+from PyQt5
+        import QtCore
+from PyQt5.QtGui
+        import QFont
+from PyQt5.QtWidgets
+        import (QApplication, QComboBox, QPushButton, QLineEdit,
+                QSpinBox, QVBoxLayout, QHBoxLayout, QGridLayout,
+                QFormLayout, QMainWindow, QStatusBar, QWidget,
+                QFileDialog, QScrollArea, QMessageBox, QLabel)
 
 
 class Window(QMainWindow):
@@ -1063,3 +1066,4 @@ if __name__ == "__main__":
     window = Window()
     window.show()
     app.exec()
+
