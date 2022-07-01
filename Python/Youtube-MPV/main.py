@@ -165,6 +165,11 @@ class Window(QMainWindow):
         self.utworKol.setText("Kolejka jest pusta.")
         self.utworKol.setAlignment(QtCore.Qt.AlignCenter)
 
+        self.utworReset = QPushButton()
+        self.utworReset.setIcon(
+            self.style().standardIcon(QStyle.SP_BrowserReload)
+        )
+
         self.utworPozycja = QSlider(Qt.Horizontal)
         self.utworPozycja.setMaximum(100)
         self.utworPozycja.setMinimum(0)
@@ -185,6 +190,7 @@ class Window(QMainWindow):
 
         self.infoCzas = QHBoxLayout()
 
+        self.infoCzas.addWidget(self.utworReset)
         self.infoCzas.addWidget(self.utworPozycja)
         self.infoCzas.addWidget(self.utworCzas)
         self.infoCzas.addWidget(self.utworPop)
@@ -362,6 +368,7 @@ class Window(QMainWindow):
             self.powtarzanie.stateChanged.connect(lambda: self._loop())
             self.suwakGlos.valueChanged.connect(self._volume)
 
+            self.utworReset.clicked.connect(lambda: self._reset())
             self.utworPop.clicked.connect(
                 lambda: self.player.playlist_prev("force")
             )
@@ -526,6 +533,9 @@ class Window(QMainWindow):
             "https://www.youtube.com/watch?v=" + identyfikator
         )
 
+    def _reset(self):
+        self.player.time_pos = 0
+
     def _pauza(self):
         if self.player.pause:
             self.wstrzymaj.setText("Wstrzymaj")
@@ -575,10 +585,10 @@ class Window(QMainWindow):
                 self.utworPozycja.setMaximum(
                     int(self.player._get_property("duration"))
                 )
-                self.utworCzas.setText(time.strftime("%M:%S", time.gmtime(
+                self.utworCzas.setText(time.strftime("%H:%M:%S", time.gmtime(
                     self.player.time_pos))
                     + "/"
-                    + time.strftime("%M:%S", time.gmtime(
+                    + time.strftime("%H:%M:%S", time.gmtime(
                         self.player._get_property("duration")))
                     )
             else:
