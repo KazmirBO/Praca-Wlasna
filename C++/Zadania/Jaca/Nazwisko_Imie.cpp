@@ -24,7 +24,8 @@ public:
   ~Pelne() { std::cout << "Imie: " << imie << std::endl; }
 };
 int main(int argc, char const *argv[]) {
-  char *im = "A", *nz = "A";
-  Pelne osoba = Pelne(im, nz);
+  char *im = "Jacek", *nz = "Bialas";
+  Pelne *osoba = new Pelne(im, nz);
+  delete osoba;
   return 0;
 }
